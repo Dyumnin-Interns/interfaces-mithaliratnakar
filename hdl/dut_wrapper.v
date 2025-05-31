@@ -10,11 +10,7 @@ module dut_wrapper(
     output wire        read_data,
     output wire        read_rdy
 );
-    dut #(
-        .FIFO_DEPTH(4),       
-        .DATA_WIDTH(1),       
-        .GUARDED_MODE(1'b1)    
-    ) dut_inst (
+    dut dut_inst (
         .CLK(clk),
         .RST_N(reset_n),
         .write_address(write_address),
