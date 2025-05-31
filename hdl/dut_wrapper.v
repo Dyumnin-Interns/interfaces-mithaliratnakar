@@ -23,3 +23,8 @@ module dut_wrapper(
         .read_rdy(read_rdy)
     );
 endmodule
+
+initial begin
+    $dumpfile("waveform.vcd");  // Saves in sim_build/
+    $dumpvars(0, dut_wrapper);  // Dump all signals
+end
