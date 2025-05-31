@@ -1,9 +1,18 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
-VERILOG_SOURCES = $(PWD)/../hdl/dut.v \
+
+# Verilog source files
+VERILOG_SOURCES = $(PWD)/../hdl/dut_wrapper.v \
+                  $(PWD)/../hdl/dut.v \
                   $(PWD)/../hdl/FIFO1.v \
                   $(PWD)/../hdl/FIFO2.v
-TOPLEVEL = dut
+
+# Top-level module (now using the wrapper)
+TOPLEVEL = dut_wrapper
+
+# Python test module
 MODULE = dut_test
-EXTRA_ARGS += --vcd=waveform.vcd
-include $(shell cocotb-config --makefiles)/Makefile.sim
+
+# Simulation options
+EXTRA_ARGS += --vcd=waveform.vcd  # Generate VCD waveform file
+EXTRA_ARGS += -Wall               #
