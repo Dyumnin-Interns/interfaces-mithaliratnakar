@@ -5,4 +5,5 @@ VERILOG_SOURCES += $(PWD)/../hdl/FIFO1.v
 VERILOG_SOURCES += $(PWD)/../hdl/FIFO2.v
 TOPLEVEL = dut
 MODULE = dut_test
+EXTRA_ARGS += --trace-fst --trace-structs
 include $(shell cocotb-config --makefiles)/Makefile.sim
