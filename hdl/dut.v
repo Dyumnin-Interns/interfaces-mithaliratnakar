@@ -1,5 +1,3 @@
-// [Previous header macros remain exactly the same]
-
 module dut(
     input  wire        CLK,
     input  wire        RST_N,
