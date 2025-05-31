@@ -168,3 +168,25 @@ module dut(CLK,
   assign y_ff$DEQ = y_ff$EMPTY_N && pwyff_deq$whas ;
   assign y_ff$CLR = 1'b0 ;
 endmodule  // dut
+
+tests/Makefile:
+
+
+SIM ?= icarus
+TOPLEVEL_LANG ?= verilog
+VERILOG_SOURCES += $(PWD)/../hdl/dut.v
+VERILOG_SOURCES += $(PWD)/../hdl/FIFO1.v
+VERILOG_SOURCES += $(PWD)/../hdl/FIFO2.v
+TOPLEVEL = dut
+MODULE = dut_test
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
+tests/dut_test.py:
+
+import cocotb
+from cocotb.triggers import Timer
+
+
+@cocotb.test()
+async def dut_test(dut):
+    assert 0, "Test not Implemented"
