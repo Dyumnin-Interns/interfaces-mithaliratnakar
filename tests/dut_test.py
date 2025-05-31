@@ -41,14 +41,14 @@ async def test_fifo_operations(dut):
     dut.read_en.value = 0
     await RisingEdge(dut.clk)  # Data should be ready
     
-    # 7. Verification
-    assert dut.read_data.value != 0xFFFFFFFF, "Read data invalid (all ones)"
-    assert dut.read_data.value != 0x00000000, "Read data invalid (all zeros)"
-    assert dut.read_data.value != 0xXXXXXXXX, "Read data undefined"
-    
-    read_val = dut.read_data.value.integer
-    assert read_val == test_data, (
-        f"Data mismatch! Wrote 0x{test_data:02X}, got 0x{read_val:02X}"
-    )
+    # 7. Verification - Fixed assertions
+    read_val = dut.read_data.value
+    if read_val.is_resolvable:
+        read_val = read_val.integer
+        assert read_val == test_data, (
+            f"Data mismatch! Wrote 0x{test_data:02X}, got 0x{read_val:02X}"
+        )
+    else:
+        assert False, f"Read data is unresolved: {read_val}"
     
     cocotb.log.info("Basic FIFO test passed")
