@@ -1,9 +1,9 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
-VERILOG_SOURCES += $(PWD)/../hdl/dut.v
-VERILOG_SOURCES += $(PWD)/../hdl/FIFO1.v
-VERILOG_SOURCES += $(PWD)/../hdl/FIFO2.v
+VERILOG_SOURCES = $(PWD)/../hdl/dut.v \
+                  $(PWD)/../hdl/FIFO1.v \
+                  $(PWD)/../hdl/FIFO2.v
 TOPLEVEL = dut
 MODULE = dut_test
-EXTRA_ARGS += --trace-fst --trace-structs
+EXTRA_ARGS += --vcd=waveform.vcd
 include $(shell cocotb-config --makefiles)/Makefile.sim
