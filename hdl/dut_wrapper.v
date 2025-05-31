@@ -10,7 +10,8 @@ module dut_wrapper(
     output wire        read_data,
     output wire        read_rdy
 );
-    delayed_dut dut_inst (
+    
+    dut dut_inst (
         .CLK(clk),
         .RST_N(reset_n),
         .write_address(write_address),
