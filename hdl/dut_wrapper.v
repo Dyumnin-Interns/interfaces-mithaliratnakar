@@ -12,7 +12,7 @@ module dut_wrapper(
 );
     dut dut_inst (
         .CLK(clk),
-        .RST_N(reset_n),
+        .RST_N(reset_n),  // Active-low
         .write_address(write_address),
         .write_data(write_data),
         .write_en(write_en),
