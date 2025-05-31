@@ -1,6 +1,6 @@
 module dut_wrapper(
     input  wire        clk,
-    input  wire        reset_n,  // Active-low
+    input  wire        reset_n,
     input  wire [2:0]  write_address,
     input  wire        write_data,
     input  wire        write_en,
@@ -10,8 +10,11 @@ module dut_wrapper(
     output wire        read_data,
     output wire        read_rdy
 );
-    
-    dut dut_inst (
+    dut #(
+        .FIFO_DEPTH(4),       
+        .DATA_WIDTH(1),       
+        .GUARDED_MODE(1'b1)    
+    ) dut_inst (
         .CLK(clk),
         .RST_N(reset_n),
         .write_address(write_address),
