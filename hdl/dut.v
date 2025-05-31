@@ -68,7 +68,6 @@ module dut(
   assign y_ff_clr = 1'b0;
 
   // Synchronous control for ENQ and DEQ signals (pulse generation)
-
   reg a_ff_enq_reg, b_ff_enq_reg, y_ff_enq_reg;
   reg a_ff_deq_reg, b_ff_deq_reg, y_ff_deq_reg;
 
@@ -89,7 +88,6 @@ module dut(
       y_ff_enq_reg <= (a_ff_empty_n && b_ff_empty_n && y_ff_full_n);
 
       // Dequeue a_ff and b_ff when y_ff is not full and both are not empty
-      // This will dequeue from a_ff and b_ff to feed y_ff
       a_ff_deq_reg <= (y_ff_full_n && a_ff_empty_n && b_ff_empty_n);
       b_ff_deq_reg <= (y_ff_full_n && a_ff_empty_n && b_ff_empty_n);
 
@@ -117,8 +115,8 @@ module dut(
     endcase
   end
 
-  // Instantiate FIFOs (assuming FIFO1 and FIFO2 are available modules)
-  FIFO2 #(.width(1), .guarded(1)) a_ff(
+  // Instantiate FIFOs with corrected parameters
+  FIFO2 #(.width(1)) a_ff(  // Removed guarded parameter
     .RST(fifo_reset),
     .CLK(CLK),
     .D_IN(a_ff_din),
@@ -130,7 +128,7 @@ module dut(
     .EMPTY_N(a_ff_empty_n)
   );
 
-  FIFO1 #(.width(1), .guarded(1)) b_ff(
+  FIFO1 #(.width(1)) b_ff(  // Removed guarded parameter
     .RST(fifo_reset),
     .CLK(CLK),
     .D_IN(b_ff_din),
@@ -142,7 +140,7 @@ module dut(
     .EMPTY_N(b_ff_empty_n)
   );
 
-  FIFO2 #(.width(1), .guarded(1)) y_ff(
+  FIFO2 #(.width(1)) y_ff(  // Removed guarded parameter
     .RST(fifo_reset),
     .CLK(CLK),
     .D_IN(y_ff_din),
