@@ -1,11 +1,10 @@
-SIM ?= icarus
-TOPLEVEL_LANG ?= verilog
-VERILOG_SOURCES = $(PWD)/../hdl/dut_wrapper.v \
-                  $(PWD)/../hdl/dut.v \
-                  $(PWD)/../hdl/FIFO1.v \
-                  $(PWD)/../hdl/FIFO2.v \
-                  $(PWD)/../hdl/delayed_dut.v
-TOPLEVEL = dut_wrapper  # Must match wrapper module name
+TOPLEVEL_LANG = verilog
+
+VERILOG_SOURCES = ../hdl/dut_wrapper.v ../hdl/dut.v ../hdl/FIFO1.v ../hdl/FIFO2.v ../hdl/delayed_dut.v
+
+TOPLEVEL = dut_wrapper
 MODULE = dut_test
-EXTRA_ARGS += --vcd=$(PWD)/tests/waveform.vcd
+
+SIM = icarus
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
