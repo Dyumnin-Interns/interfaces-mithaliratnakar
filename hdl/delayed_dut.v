@@ -47,31 +47,31 @@ module delayed_dut (
 
   wire write_a = write_en && (write_address == 3'd4);
   wire write_b = write_en && (write_address == 3'd5);
-
-  wire read_y = read_en && (read_address == 3'd3);
+  wire read_y  = read_en && (read_address == 3'd3);
 
   assign counter_D_IN = counter + 8'd1;
-  assign counter_EN = 1'b1;
+  assign counter_EN   = 1'b1;
 
-  assign a_ff_D_IN = write_data;
+  // FIFO A
+  assign a_ff_D_IN  = write_data;
+  assign a_ff_ENQ   = a_ff_FULL_N && write_a;
+  assign a_ff_DEQ   = y_ff_FULL_N && a_ff_EMPTY_N && b_ff_EMPTY_N && (counter == 8'd50);
+  assign a_ff_CLR   = 1'b0;
 
-  assign a_ff_ENQ = a_ff_FULL_N && write_a;
-  assign a_ff_DEQ = y_ff_FULL_N && a_ff_EMPTY_N && b_ff_EMPTY_N && (counter == 8'd50);
-  assign a_ff_CLR = 1'b0;
+  // FIFO B
+  assign b_ff_D_IN  = write_data;
+  assign b_ff_ENQ   = b_ff_FULL_N && write_b;
+  assign b_ff_DEQ   = y_ff_FULL_N && a_ff_EMPTY_N && b_ff_EMPTY_N && (counter == 8'd50);
+  assign b_ff_CLR   = 1'b0;
 
-  assign b_ff_D_IN = write_data;
-  assign b_ff_ENQ = b_ff_FULL_N && write_b;
-  assign b_ff_DEQ = y_ff_FULL_N && a_ff_EMPTY_N && b_ff_EMPTY_N && (counter == 8'd50);
-  assign b_ff_CLR = 1'b0;
+  // FIFO Y
+  assign y_ff_D_IN  = a_ff_D_OUT || b_ff_D_OUT;
+  assign y_ff_ENQ   = y_ff_FULL_N && a_ff_EMPTY_N && b_ff_EMPTY_N && (counter == 8'd50);
+  assign y_ff_DEQ   = y_ff_EMPTY_N && read_y;
+  assign y_ff_CLR   = 1'b0;
 
-  assign y_ff_D_IN = a_ff_D_OUT || b_ff_D_OUT;
-  assign y_ff_ENQ = y_ff_FULL_N && a_ff_EMPTY_N && b_ff_EMPTY_N && (counter == 8'd50);
-  // Dequeue when FIFO is not empty and read_y is asserted
-  assign y_ff_DEQ = y_ff_EMPTY_N && read_y;
-  assign y_ff_CLR = 1'b0;
-
-  // Instantiate FIFO modules
-  FIFO2 #(.width(1), .guarded(1'b1)) a_ff (
+  // FIFO instantiations
+  FIFO2 #(.width(1)) a_ff (
     .CLK(CLK),
     .RST(RST_N),
     .D_IN(a_ff_D_IN),
@@ -83,7 +83,7 @@ module delayed_dut (
     .EMPTY_N(a_ff_EMPTY_N)
   );
 
-  FIFO1 #(.width(1), .guarded(1'b1)) b_ff (
+  FIFO1 #(.width(1)) b_ff (
     .CLK(CLK),
     .RST(RST_N),
     .D_IN(b_ff_D_IN),
@@ -95,7 +95,7 @@ module delayed_dut (
     .EMPTY_N(b_ff_EMPTY_N)
   );
 
-  FIFO2 #(.width(1), .guarded(1'b1)) y_ff (
+  FIFO2 #(.width(1)) y_ff (
     .CLK(CLK),
     .RST(RST_N),
     .D_IN(y_ff_D_IN),
@@ -107,7 +107,7 @@ module delayed_dut (
     .EMPTY_N(y_ff_EMPTY_N)
   );
 
-  // Read data logic
+  // Read logic
   always @(*) begin
     case (read_address)
       3'd0: read_data = a_ff_FULL_N;
@@ -118,7 +118,7 @@ module delayed_dut (
     endcase
   end
 
-  // Counter update
+  // Counter logic
   always @(posedge CLK or `BSV_RESET_EDGE RST_N) begin
     if (RST_N == `BSV_RESET_VALUE) begin
       counter <= `BSV_ASSIGNMENT_DELAY 8'd0;
