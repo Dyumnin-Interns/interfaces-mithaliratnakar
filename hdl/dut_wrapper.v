@@ -1,14 +1,14 @@
 module dut_wrapper(
-    input wire clk,
-    input wire reset_n,
-    input wire [2:0] write_address,
-    input wire write_data,
-    input wire write_en,
-    output wire write_rdy,
-    input wire [2:0] read_address,
-    input wire read_en,
-    output wire read_data,
-    output wire read_rdy
+    input  wire        clk,
+    input  wire        reset_n,  // Active-low
+    input  wire [2:0]  write_address,
+    input  wire        write_data,
+    input  wire        write_en,
+    output wire        write_rdy,
+    input  wire [2:0]  read_address,
+    input  wire        read_en,
+    output wire        read_data,
+    output wire        read_rdy
 );
     dut dut_inst (
         .CLK(clk),
