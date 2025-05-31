@@ -1,7 +1,6 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
-from cocotb.utils import get_sim_time
 import random
 from cocotb.queue import Queue
 
@@ -28,7 +27,6 @@ async def test_fifo_randomized(dut):
     RESET_CYCLES = 2
     TEST_ITERATIONS = 20
     DATA_QUEUE = Queue()
-    
 
     def randomize_transaction():
         """Generate random transaction with constraints"""
@@ -40,18 +38,20 @@ async def test_fifo_randomized(dut):
 
     async def reset():
         """Reset sequence"""
+        dut.clk.value = 0
         dut.reset_n.value = 0
         dut.write_en.value = 0
         dut.read_en.value = 0
         dut.write_address.value = 0
         dut.read_address.value = 0
-        
+        dut.write_data.value = 0
+
         for _ in range(RESET_CYCLES):
             await RisingEdge(dut.clk)
-            
+
         dut.reset_n.value = 1
         await RisingEdge(dut.clk)
-        
+
         assert dut.write_rdy.value == 1, "Write not ready after reset"
         assert dut.read_rdy.value == 1, "Read not ready after reset"
 
@@ -59,32 +59,33 @@ async def test_fifo_randomized(dut):
         """Randomized transaction driver"""
         for _ in range(TEST_ITERATIONS):
             item = randomize_transaction()
-            
+
             # Random delay before write
             for _ in range(item.delay):
                 await RisingEdge(dut.clk)
-            
+
             # Create write transaction
             trans = FIFOTransaction()
             trans.write_en = 1
             trans.write_addr = item.addr
             trans.write_data = item.data
-            
+
             # Wait for write ready
             while dut.write_rdy.value != 1:
                 await RisingEdge(dut.clk)
-            
+
             # Drive write signals
             dut.write_en.value = trans.write_en
             dut.write_address.value = trans.write_addr
             dut.write_data.value = trans.write_data
             await RisingEdge(dut.clk)
             dut.write_en.value = 0
-            
+
             # Store expected read data
             trans.expected_data = item.data
+            trans.read_addr = item.addr
             await DATA_QUEUE.put(trans)
-            
+
             cocotb.log.info(f"Driven write: addr={item.addr}, data=0x{item.data:02X}")
 
     async def monitor():
@@ -92,43 +93,42 @@ async def test_fifo_randomized(dut):
         for _ in range(TEST_ITERATIONS):
             # Get expected transaction
             expected = await DATA_QUEUE.get()
-            
+
             # Wait for read ready
             while dut.read_rdy.value != 1:
                 await RisingEdge(dut.clk)
-            
+
             # Drive read signals
             dut.read_en.value = 1
-            dut.read_address.value = expected.write_addr
+            dut.read_address.value = expected.read_addr
             await RisingEdge(dut.clk)
             dut.read_en.value = 0
-            
+
             # Capture read data
             await RisingEdge(dut.clk)
             actual_data = dut.read_data.value.integer
-            
+
             # Verify
             assert actual_data == expected.expected_data, (
-                f"Data mismatch at addr {expected.write_addr}: "
+                f"Data mismatch at addr {expected.read_addr}: "
                 f"Expected 0x{expected.expected_data:02X}, "
                 f"got 0x{actual_data:02X}"
             )
-            
-            cocotb.log.info(f"Verified read: addr={expected.write_addr}, data=0x{actual_data:02X}")
 
- 
+            cocotb.log.info(f"Verified read: addr={expected.read_addr}, data=0x{actual_data:02X}")
+
+    # Start clock
     clock = Clock(dut.clk, CLK_PERIOD_NS, units="ns")
     cocotb.start_soon(clock.start())
-    
+
     # Apply reset
     await reset()
-    
-    # Run driver and monitor in parallel
-    await cocotb.start(driver())
-    await cocotb.start(monitor())
-    
-    # Wait for completion
-    for _ in range(TEST_ITERATIONS * 5):  # Timeout safeguard
-        await RisingEdge(dut.clk)
-    
+
+    # Run driver and monitor in parallel and await their completion
+    driver_task = cocotb.start_soon(driver())
+    monitor_task = cocotb.start_soon(monitor())
+
+    await driver_task
+    await monitor_task
+
     cocotb.log.info("All randomized transactions verified successfully!")
