@@ -3,7 +3,14 @@ TOPLEVEL_LANG ?= verilog
 VERILOG_SOURCES += $(PWD)/../hdl/dut.v
 VERILOG_SOURCES += $(PWD)/../hdl/FIFO1.v
 VERILOG_SOURCES += $(PWD)/../hdl/FIFO2.v
-TOPLEVEL = dut
+VERILOG_SOURCES += $(PWD)/../hdl/dut_wrapper.v
+TOPLEVEL = dut_wrapper
 MODULE = dut_test
-EXTRA_ARGS += --trace-fst --trace-structs
+
+ifeq ($(SIM),icarus)
+    COMPILE_ARGS += -D COCOTB_SIM=1 -g2012
+    PLUSARGS += -fst
+    EXTRA_ARGS += --vcd=waves.vcd --wave=waves.fst
+endif
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
