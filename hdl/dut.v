@@ -17,7 +17,6 @@ module dut(
 
   FIFO2 #(
     .width(1),
-    .guarded(1'b1)  
   ) a_ff(
     .RST(fifo_reset),
     .CLK(CLK),
@@ -32,7 +31,6 @@ module dut(
 
   FIFO1 #(
     .width(1),
-    .guarded(1'b1)  // Explicitly set guarded parameter
   ) b_ff(
     .RST(fifo_reset),
     .CLK(CLK),
@@ -47,7 +45,6 @@ module dut(
 
   FIFO2 #(
     .width(1),
-    .guarded(1'b1)  
   ) y_ff(
     .RST(fifo_reset),
     .CLK(CLK),
