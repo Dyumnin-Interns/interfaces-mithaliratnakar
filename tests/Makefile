@@ -14,5 +14,5 @@ TOPLEVEL = dut_wrapper
 MODULE = dut_test
 
 # Simulation options
-EXTRA_ARGS += --vcd=waveform.vcd  # Generate VCD waveform file
-EXTRA_ARGS += -Wall               #
+EXTRA_ARGS += --vcd=waveform.vcd  
+EXTRA_ARGS += -Wall               
