@@ -46,8 +46,8 @@ module mkDut(Ifc_dut);
     
     method Action write(Bit#(3) address, Bool data);
         case (address)
-            3'b100: a_data <= data;  
-            3'b101: b_data <= data;  
+            3'b100: a_data <= data;  // address 4
+            3'b101: b_data <= data;  // address 5
         endcase
     endmethod
     
@@ -58,7 +58,7 @@ module mkDut(Ifc_dut);
     endmethod
     
     method Action read(Bit#(3) address);
-        if (address == 3'b011) begin  
+        if (address == 3'b011) begin  // address 3
             read_pw.send();
         end
     endmethod
