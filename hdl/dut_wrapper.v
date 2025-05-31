@@ -12,7 +12,7 @@ module dut_wrapper(
 );
     dut dut_inst (
         .CLK(clk),
-        .RST_N(reset_n),  // Active-low
+        .RST_N(reset_n),
         .write_address(write_address),
         .write_data(write_data),
         .write_en(write_en),
@@ -22,9 +22,9 @@ module dut_wrapper(
         .read_data(read_data),
         .read_rdy(read_rdy)
     );
+    
+    initial begin
+        $dumpfile("waveform.vcd");
+        $dumpvars(0, dut_wrapper);
+    end
 endmodule
-
-initial begin
-    $dumpfile("waveform.vcd");  // Saves in sim_build/
-    $dumpvars(0, dut_wrapper);  // Dump all signals
-end
