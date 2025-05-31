@@ -1,4 +1,3 @@
-
 `ifdef BSV_ASSIGNMENT_DELAY
 `else
   `define BSV_ASSIGNMENT_DELAY
@@ -129,7 +128,5 @@ module FIFO1(CLK,
                 end
            end // if (RST == ! `BSV_RESET_VALUE)
      end
-   // synopsys translate_on
 
 endmodule
-
