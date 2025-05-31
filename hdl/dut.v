@@ -1,14 +1,10 @@
 module dut(
     input  wire        CLK,
     input  wire        RST_N,
-
-    // Write interface
     input  wire [2:0]  write_address,
     input  wire        write_data,
     input  wire        write_en,
     output wire        write_rdy,
-
-    // Read interface
     input  wire [2:0]  read_address,
     input  wire        read_en,
     output reg         read_data,
@@ -16,8 +12,8 @@ module dut(
 );
 
   FIFO2 #(
-    .width(1),
-  ) a_ff(
+    .width(1)
+  ) a_ff (
     .RST(fifo_reset),
     .CLK(CLK),
     .D_IN(a_ff_din),
@@ -30,8 +26,8 @@ module dut(
   );
 
   FIFO1 #(
-    .width(1),
-  ) b_ff(
+    .width(1)
+  ) b_ff (
     .RST(fifo_reset),
     .CLK(CLK),
     .D_IN(b_ff_din),
@@ -44,8 +40,8 @@ module dut(
   );
 
   FIFO2 #(
-    .width(1),
-  ) y_ff(
+    .width(1)
+  ) y_ff (
     .RST(fifo_reset),
     .CLK(CLK),
     .D_IN(y_ff_din),
