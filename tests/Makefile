@@ -11,8 +11,6 @@ ifeq ($(SIM),icarus)
     COMPILE_ARGS += -D COCOTB_SIM=1 -g2012
     PLUSARGS += -fst
     EXTRA_ARGS += --vcd=waves.vcd --wave=waves.fst
-    EXTRA_ARGS += -D COCOTB_SIM
 endif
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
-
