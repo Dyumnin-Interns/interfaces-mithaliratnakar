@@ -7,12 +7,15 @@ import random
 @cocotb.test()
 async def test_fifo_aligned(dut):
     """FIFO testbench aligned with waveform signals and robust checks"""
-
+    
+    
     DEBUG = True
     CLK_PERIOD_NS = 10  # 100MHz clock
     RESET_CYCLES = 2    # Minimum 2 clock cycles for reset
     TEST_ITERATIONS = 5 # Reduced for quicker debugging
-
+    
+    
+   
     def log_signal(name):
         """Log signal value if it exists"""
         if DEBUG and hasattr(dut, name):
@@ -89,7 +92,8 @@ async def test_fifo_aligned(dut):
                 f"Expected 0x{expected:02X}, got 0x{read_data:02X}"
             )
         return read_data
-t
+
+  
     required_signals = ['clk', 'reset_n', 'write_en', 'write_data', 
                        'write_address', 'read_en', 'read_data', 'read_address']
     for sig in required_signals:
@@ -103,6 +107,7 @@ t
     # Apply reset
     await reset()
 
+    
     test_data = [
         (0, 0xAA),  # Simple pattern
         (1, 0x55),  # Alternating bits
@@ -110,15 +115,18 @@ t
         (3, 0xFF)   # All ones
     ]
 
+    # Test 1: Basic write/read sequence
     for addr, data in test_data:
         await write_operation(addr, data)
         readback = await read_operation(addr)
         assert readback == data, f"Basic test failed at addr {addr}"
 
+    # Test 2: Verify data persistence
     cocotb.log.info("Verifying data persistence...")
     for addr, data in test_data:
         readback = await read_operation(addr, data)
 
+    # Test 3: Random access test
     random.seed(cocotb.plusargs.get("SEED", 42))
     for _ in range(TEST_ITERATIONS):
         addr = random.randint(0, 15)
