@@ -10,7 +10,7 @@ endinterface
 (*synthesize*)
 module dut(Ifc_dut);
 	FIFOF#(Bool) a_ff <- mkFIFOF();
-	FIFOF#(Bool) b_ff <- mkFIFOF1();
+	FIFOF#(Bool) b_ff <- mkFIFOF1(); // FIFOF1 can hold at least one element
 	FIFOF#(Bool) y_ff <- mkFIFOF();
 	Wire#(Bool) a_data <-mkWire();
 	Wire#(Bool) b_data <-mkWire();
@@ -51,7 +51,7 @@ module dut(Ifc_dut);
 			default:return False;
 		endcase;
 		if (address==3) begin
- 		       	pwyff_deq.send();
+ 		       	pwyff_deq.send(); // This will trigger yff_deq rule
 		end
 		return rv;
 	endmethod
