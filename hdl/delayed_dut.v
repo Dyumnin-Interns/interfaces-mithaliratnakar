@@ -118,7 +118,7 @@ module dut(CLK,
   assign read_rdy = 1'd1 ;
 
   // submodule a_ff
-  FIFO2 #(.width(32'd1), .guarded(1'd1)) a_ff(.RST(RST_N),
+  FIFO2 #(.width(32'd1)) a_ff(.RST(RST_N),
 					      .CLK(CLK),
 					      .D_IN(a_ff$D_IN),
 					      .ENQ(a_ff$ENQ),
@@ -129,7 +129,7 @@ module dut(CLK,
 					      .EMPTY_N(a_ff$EMPTY_N));
 
   // submodule b_ff
-  FIFO1 #(.width(32'd1), .guarded(1'd1)) b_ff(.RST(RST_N),
+  FIFO1 #(.width(32'd1)) b_ff(.RST(RST_N),
 					      .CLK(CLK),
 					      .D_IN(b_ff$D_IN),
 					      .ENQ(b_ff$ENQ),
@@ -140,7 +140,7 @@ module dut(CLK,
 					      .EMPTY_N(b_ff$EMPTY_N));
 
   // submodule y_ff
-  FIFO2 #(.width(32'd1), .guarded(1'd1)) y_ff(.RST(RST_N),
+  FIFO2 #(.width(32'd1)) y_ff(.RST(RST_N),
 					      .CLK(CLK),
 					      .D_IN(y_ff$D_IN),
 					      .ENQ(y_ff$ENQ),
