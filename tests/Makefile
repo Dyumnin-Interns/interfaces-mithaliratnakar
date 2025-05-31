@@ -15,3 +15,4 @@ ifeq ($(SIM),icarus)
 endif
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
+
