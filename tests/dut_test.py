@@ -9,8 +9,8 @@ import random
 async def test_fifo_deep_debug(dut):
     """FIFO test with transaction-level debugging and failure isolation"""
     
-    # Configuration - REPLACE WITH YOUR ACTUAL PARAMETERS
-    FIFO_DEPTH = 8  # Example - adjust based on your design
+  
+    FIFO_DEPTH = 8 
     CLK_PERIOD_NS = 10
     RANDOM_SEED = random.randint(0, 2**32-1)
     random.seed(RANDOM_SEED)
@@ -35,7 +35,7 @@ async def test_fifo_deep_debug(dut):
     for _ in range(5):
         await RisingEdge(dut.clk)
     dut.reset_n.value = 1
-    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk) # Wait one full cycle after reset de-assertion
     
     # --- Test Scenario Builder ---
     class TestScenario:
@@ -71,9 +71,9 @@ async def test_fifo_deep_debug(dut):
             
     scenario = TestScenario()
     
-    # --- Test Sequence ---
+ 
     try:
-        # First verify basic write/read
+        
         addr = 0
         test_data = 0x55
         dut._log.info(f"\n=== Basic Write/Read Test ===")
@@ -84,6 +84,7 @@ async def test_fifo_deep_debug(dut):
         dut.write_data.value = test_data
         dut.write_en.value = 1
         scenario.add_write(addr, test_data, get_sim_time())
+        await Timer(1, units='ns') # **ADDED: Small delay to ensure signals settle**
         await RisingEdge(dut.clk)
         dut.write_en.value = 0
         
@@ -91,6 +92,7 @@ async def test_fifo_deep_debug(dut):
         await First(RisingEdge(dut.read_rdy), Timer(100, 'ns'))
         dut.read_address.value = addr
         dut.read_en.value = 1
+        await Timer(1, units='ns') # **ADDED: Small delay to ensure signals settle**
         await RisingEdge(dut.clk)
         dut.read_en.value = 0
         await RisingEdge(dut.clk)  # Data delay
@@ -111,18 +113,21 @@ async def test_fifo_deep_debug(dut):
                 dut.write_data.value = data
                 dut.write_en.value = 1
                 scenario.add_write(addr, data, get_sim_time())
+                await Timer(1, units='ns')
                 await RisingEdge(dut.clk)
                 dut.write_en.value = 0
             else:
                 # Read operation
                 await First(RisingEdge(dut.read_rdy), Timer(100, 'ns'))
-                dut.read_address.value = addr
+                dut.read_address.value = 
                 dut.read_en.value = 1
+                scenario.add_read(addr, read_val.integer, get_sim_time()) 
+                await Timer(1, units='ns') 
                 await RisingEdge(dut.clk)
                 dut.read_en.value = 0
-                await RisingEdge(dut.clk)  # Data delay
+                await RisingEdge(dut.clk)  
                 read_val = dut.read_data.value
-                scenario.add_read(addr, read_val.integer, get_sim_time())
+                scenario.add_read(addr, read_val.integer, get_sim_time()) 
                 
     except Exception as e:
         dut._log.error(f"Test failed with RANDOM_SEED={RANDOM_SEED}")
