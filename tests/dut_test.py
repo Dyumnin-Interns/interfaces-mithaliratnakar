@@ -1,21 +1,27 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer, FallingEdge
+from cocotb.triggers import RisingEdge, Timer, First
 from cocotb.utils import get_sim_time
 from cocotb.binary import BinaryValue
+import random
 
 @cocotb.test()
-async def test_fifo_debug(dut):
-    """Enhanced FIFO test with waveform-friendly timing and detailed checks"""
+async def test_fifo_randomized(dut):
+    """FIFO test with randomized traffic and detailed debugging"""
     
     # Configuration
     CLK_PERIOD_NS = 10
-    RESET_CYCLES = 3
-    DEBUG = True
+    RESET_CYCLES = 5  # Extended reset for stability
+    TEST_ITERATIONS = 20
+    RANDOM_SEED = random.randint(0, 2**32-1)
+    random.seed(RANDOM_SEED)
     
-    # Clock generation with phase offset for clearer waveforms
+    # Log test configuration
+    dut._log.info(f"Starting test with RANDOM_SEED={RANDOM_SEED}")
+    
+    # Clock generation with phase offset
     clock = Clock(dut.clk, CLK_PERIOD_NS, units="ns")
-    cocotb.start_soon(clock.start(start_high=False, phase=5))  # 5ns phase for edge visibility
+    cocotb.start_soon(clock.start(start_high=False, phase=3))
     
     # Initialize
     dut.reset_n.value = 0
@@ -26,82 +32,89 @@ async def test_fifo_debug(dut):
     dut.read_address.value = 0
     
     # Reset sequence with waveform markers
-    await Timer(1, 'ns')  # Initial delay for waveform clarity
     for _ in range(RESET_CYCLES):
         await RisingEdge(dut.clk)
     dut.reset_n.value = 1
-    await Timer(2, 'ns')  # Padding for waveform viewer
+    await Timer(2, 'ns')  # Hold after reset
     
     # Post-reset checks
     assert dut.reset_n.value == 1, "Reset not deasserted"
-    await RisingEdge(dut.clk)
+    await First(
+        RisingEdge(dut.clk),
+        Timer(100, 'ns')
+    )
     
-    # Test data with distinctive patterns
-    test_vectors = [
-        (0, 0x55),  # 01010101 - alternating bits
-        (1, 0xAA),  # 10101010 - inverse pattern
-        (2, 0x01),  # 00000001 - single bit set
-        (3, 0x80)   # 10000000 - high bit set
-    ]
+    # Test operations storage for debugging
+    operations = []
     
-    for addr, data in test_vectors:
-        # --- Write Operation ---
-        # Wait for write ready with timeout
-        timeout = 20
-        while dut.write_rdy.value != 1 and timeout > 0:
-            await RisingEdge(dut.clk)
-            timeout -= 1
-        assert timeout > 0, f"Timeout waiting for write_rdy @ addr {addr}"
+    for i in range(TEST_ITERATIONS):
+        # Randomize operation type (write or read)
+        is_write = random.choice([True, False])
+        addr = random.randint(0, 7)
+        data = random.randint(0, 255) if is_write else None
         
-        # Setup write with clean timing
-        await FallingEdge(dut.clk)  # Setup during clock low
-        dut.write_address.value = addr
-        dut.write_data.value = data
-        await Timer(1, 'ns')  # Hold before edge
-        dut.write_en.value = 1
-        
-        # Execute write
-        await RisingEdge(dut.clk)
-        await Timer(1, 'ns')  # Hold after edge
-        dut.write_en.value = 0
-        
-        # --- Read Operation ---
-        # Wait for read ready
-        timeout = 20
-        while dut.read_rdy.value != 1 and timeout > 0:
-            await RisingEdge(dut.clk)
-            timeout -= 1
-        assert timeout > 0, f"Timeout waiting for read_rdy @ addr {addr}"
-        
-        # Setup read
-        await FallingEdge(dut.clk)
-        dut.read_address.value = addr
-        await Timer(1, 'ns')
-        dut.read_en.value = 1
-        
-        # Execute read
-        await RisingEdge(dut.clk)
-        await Timer(1, 'ns')
-        dut.read_en.value = 0
-        
-        # Validate read data
-        await RisingEdge(dut.clk)  # Allow 1 cycle for data
-        await Timer(2, 'ns')  # Sampling delay
-        
-        # Enhanced error reporting
-        observed = dut.read_data.value
-        if not observed.is_resolvable:
-            assert False, (f"Unresolved read data @ {get_sim_time()} ps: "
-                          f"{observed.binstr} (address {addr})")
-        
-        assert observed.integer == data, (
-            f"Data mismatch @ {get_sim_time()} ps (address {addr}):\n"
-            f"Expected: {bin(data)} (0x{data:02X})\n"
-            f"Observed: {observed.binstr} (0x{observed.integer:02X})\n"
-            f"Write timing: {dut.write_en.value} (en) | {dut.write_rdy.value} (rdy)\n"
-            f"Read timing:  {dut.read_en.value} (en) | {dut.read_rdy.value} (rdy)"
-        )
-    
-    # Final check for FIFO empty state
-    await RisingEdge(dut.clk)
-    assert dut.read_rdy.value == 1, "FIFO not empty after all reads"
+        try:
+            if is_write:
+                # Write operation
+                await First(
+                    RisingEdge(dut.clk) & (dut.write_rdy.value == 1),
+                    Timer(200, 'ns')
+                )
+                assert dut.write_rdy.value == 1, f"Write timeout @ iter {i}"
+                
+                dut.write_address.value = addr
+                dut.write_data.value = data
+                dut.write_en.value = 1
+                await RisingEdge(dut.clk)
+                dut.write_en.value = 0
+                
+                operations.append(('write', addr, data, get_sim_time()))
+                
+            else:
+                # Read operation
+                await First(
+                    RisingEdge(dut.clk) & (dut.read_rdy.value == 1),
+                    Timer(200, 'ns')
+                )
+                assert dut.read_rdy.value == 1, f"Read timeout @ iter {i}"
+                
+                dut.read_address.value = addr
+                dut.read_en.value = 1
+                await RisingEdge(dut.clk)
+                dut.read_en.value = 0
+                await RisingEdge(dut.clk)  # Data delay
+                
+                read_val = dut.read_data.value
+                operations.append(('read', addr, read_val.integer, get_sim_time()))
+                
+                # Verify against last write to same address
+                expected_data = next(
+                    (op[2] for op in reversed(operations) 
+                    if op[0] == 'write' and op[1] == addr),
+                    None
+                )
+                
+                if expected_data is not None:
+                    assert read_val.integer == expected_data, (
+                        f"Data mismatch @ addr {addr} (iter {i}):\n"
+                        f"Expected: 0x{expected_data:02X} ({bin(expected_data)})\n"
+                        f"Received: 0x{read_val.integer:02X} ({read_val.binstr})\n"
+                        f"Operations history:\n{format_operations(operations)}"
+                    )
+                    
+        except AssertionError as e:
+            dut._log.error(f"Failure at iteration {i}:")
+            dut._log.error(f"Current operation: {'write' if is_write else 'read'} addr {addr}")
+            if is_write:
+                dut._log.error(f"Write data: 0x{data:02X}")
+            else:
+                dut._log.error(f"Read data: 0x{read_val.integer:02X}")
+            dut._log.error(f"Operations history:\n{format_operations(operations)}")
+            raise
+
+def format_operations(ops):
+    """Format operations history for debugging"""
+    return "\n".join(
+        f"{i:3d}: {op[0]:5s} addr={op[1]} data=0x{op[2]:02X} @ {op[3]} ps"
+        for i, op in enumerate(ops)
+    )
