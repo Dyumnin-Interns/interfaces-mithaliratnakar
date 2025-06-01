@@ -15,19 +15,17 @@ module dut(
     input  wire        CLK,
     input  wire        RST_N,
     input  wire [2:0]  write_address,
-    input  wire [7:0]  write_data,    
+    input  wire [7:0]  write_data,    // **FIXED: Now 8 bits wide**
     input  wire        write_en,
     output wire        write_rdy,
     input  wire [2:0]  read_address,
     input  wire        read_en,
-    output reg  [7:0]  read_data,     
+    output reg  [7:0]  read_data,     // **FIXED: Now 8 bits wide**
     output wire        read_rdy
 );
 
   // Internal wires and regs for FIFO connections
-  // These declarations correspond to the signals used in your FIFO instantiations
-  // A reset signal for FIFOs (often active-low in Verilog, but check your FIFO modules)
-  wire fifo_reset;
+  wire fifo_reset; 
 
   wire a_ff_enq, a_ff_deq, a_ff_clr, a_ff_full_n, a_ff_empty_n;
   wire [7:0] a_ff_din;   // **FIXED: Now 8 bits wide**
@@ -41,18 +39,18 @@ module dut(
   wire [7:0] y_ff_din;   // **FIXED: Now 8 bits wide**
   wire [7:0] y_ff_dout;  // **FIXED: Now 8 bits wide**
 
-  // Register counter (from your previous full code)
+  // Register counter
   reg [7 : 0] counter;
   wire [7 : 0] counter$D_IN;
   wire counter$EN;
 
-  // Inlined wires (from your previous full code)
+  // Inlined wires for write/read enables based on address
   wire a_data$whas, b_data$whas, pwyff_deq$whas;
 
 
   // Submodule instantiations (FIFOs)
   FIFO2 #(
-    .width(8) // **FIXED: FIFO width is 8 bits to match data path**
+    .width(8) // **FIXED: FIFO width is 8 bits**
   ) a_ff (
     .RST(fifo_reset),
     .CLK(CLK),
@@ -66,7 +64,7 @@ module dut(
   );
 
   FIFO1 #(
-    .width(8) // **FIXED: FIFO width is 8 bits to match data path**
+    .width(8) // **FIXED: FIFO width is 8 bits**
   ) b_ff (
     .RST(fifo_reset),
     .CLK(CLK),
@@ -80,7 +78,7 @@ module dut(
   );
 
   FIFO2 #(
-    .width(8) // **FIXED: FIFO width is 8 bits to match data path**
+    .width(8) // **FIXED: FIFO width is 8 bits**
   ) y_ff (
     .RST(fifo_reset),
     .CLK(CLK),
@@ -92,6 +90,8 @@ module dut(
     .FULL_N(y_ff_full_n),
     .EMPTY_N(y_ff_empty_n)
   );
+
+  // Reset logic for FIFOs (active-low reset for RST_N)
   assign fifo_reset = ~RST_N;
 
   // action method write
@@ -99,44 +99,50 @@ module dut(
 
   // actionvalue method read
   always@(read_address or
-          y_ff_empty_n or y_ff_dout or a_ff_full_n or b_ff_full_n)
+          y_ff_empty_n or y_ff_dout or a_ff_full_n or b_ff_full_n or a_ff_dout or b_ff_dout) // Added a_ff_dout, b_ff_dout to sensitivity list
   begin
     case (read_address)
-      3'd0: read_data = {7'b0, a_ff_full_n}; // Example: pack 1-bit full_n into 8-bit output
-                                           // If you intend to read data from FIFO 'a', change to: read_data = a_ff_dout;
-      3'd1: read_data = {7'b0, b_ff_full_n}; // Example: pack 1-bit full_n into 8-bit output
-                                           // If you intend to read data from FIFO 'b', change to: read_data = b_ff_dout;
-      3'd2: read_data = {7'b0, y_ff_empty_n}; // Example: pack 1-bit empty_n into 8-bit output
-      3'd3: read_data = y_ff_dout; // Directly assign 8-bit output from y_ff as determined in previous discussion
-      default: read_data = 8'd0; // Default to 0 for unhandled addresses
+      3'd0: read_data = a_ff_dout; // **FIXED: Now reads the actual data from FIFO 'a'**
+      3'd1: read_data = b_ff_dout; // **FIXED: Now reads the actual data from FIFO 'b'**
+      3'd2: read_data = {7'b0, y_ff_empty_n};
+      3'd3: read_data = y_ff_dout;
+      default: read_data = 8'd0;
     endcase
   end
   assign read_rdy = 1'd1 ; // Example: read is always ready
 
-  // Inlined wires (from your previous full code for write/read enables based on address)
-  assign a_data$whas = write_en && write_address == 3'd4 ;
-  assign b_data$whas = write_en && write_address == 3'd5 ;
+  // Inlined wires for write/read enables based on address
+  assign a_data$whas = write_en && write_address == 3'd0 ; // **FIXED: Enqueue to a_ff when write_address is 0**
+  assign b_data$whas = write_en && write_address == 3'd5 ; // (Remains as is, not part of current test focus)
   assign pwyff_deq$whas = read_en && read_address == 3'd3 ;
 
-  // register counter logic (from your previous full code)
+  // register counter logic
   assign counter$D_IN = counter + 8'd1 ;
   assign counter$EN = 1'd1 ;
 
   // submodule a_ff logic connections
-  assign a_ff_din = write_data ; // Connects 8-bit write_data to 8-bit FIFO input
+  assign a_ff_din = write_data ; 
   assign a_ff_enq = a_ff_full_n && a_data$whas ;
-  assign a_ff_deq = y_ff_full_n && a_ff_empty_n && b_ff_empty_n && counter == 8'd50 ;
+  assign a_ff_deq = read_en && read_address == 3'd0 && a_ff_empty_n; // **FIXED: Dequeue a_ff when reading from address 0**
   assign a_ff_clr = 1'b0 ;
 
-  assign b_ff_din = write_data ; // Connects 8-bit write_data to 8-bit FIFO input
+  // submodule b_ff logic connections
+  assign b_ff_din = write_data ; 
   assign b_ff_enq = b_ff_full_n && b_data$whas ;
+  // Original b_ff_deq logic (remains as is for other processing)
   assign b_ff_deq = y_ff_full_n && a_ff_empty_n && b_ff_empty_n && counter == 8'd50 ;
   assign b_ff_clr = 1'b0 ;
-  assign y_ff_din = a_ff_dout | b_ff_dout ; // Connects 8-bit result to 8-bit FIFO input
+
+  // submodule y_ff logic connections
+  // IMPORTANT: This '|' performs a BITWISE OR on 8-bit values from a_ff_dout and b_ff_dout.
+  // Ensure this is the desired combination logic.
+  assign y_ff_din = a_ff_dout | b_ff_dout ; 
+  // Original y_ff_enq logic (remains as is for other processing)
   assign y_ff_enq = y_ff_full_n && a_ff_empty_n && b_ff_empty_n && counter == 8'd50 ;
   assign y_ff_deq = y_ff_empty_n && pwyff_deq$whas ;
   assign y_ff_clr = 1'b0 ;
 
+  // handling of inlined registers (for the counter)
   always@(posedge CLK or `BSV_RESET_EDGE RST_N)
   if (RST_N == `BSV_RESET_VALUE)
     begin
@@ -146,11 +152,14 @@ module dut(
     begin
       if (counter$EN) counter <= `BSV_ASSIGNMENT_DELAY counter$D_IN;
     end
+
+  // synopsys translate_off
   `ifdef BSV_NO_INITIAL_BLOCKS
-  `else 
+  `else // not BSV_NO_INITIAL_BLOCKS
   initial
   begin
-    counter = 8'hAA; 
+    counter = 8'hAA; // Initial value for simulation (may be overridden by reset)
   end
-  `endif 
+  `endif
+
 endmodule 
