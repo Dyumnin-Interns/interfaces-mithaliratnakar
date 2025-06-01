@@ -5,112 +5,103 @@ from cocotb.utils import get_sim_time
 from cocotb.binary import BinaryValue
 
 @cocotb.test()
-async def test_fifo_deep_debug(dut):
-    """Enhanced FIFO test with proper handshake protocol"""
+async def test_fifo_debug(dut):
+    """Enhanced FIFO test with waveform-friendly timing and detailed checks"""
     
     # Configuration
     CLK_PERIOD_NS = 10
     RESET_CYCLES = 3
     DEBUG = True
-    TIMEOUT_CYCLES = 100
     
-    def log_signals():
-        if DEBUG:
-            cocotb.log.info(f"Time {get_sim_time()} ps - Signals:")
-            for sig in ['clk', 'reset_n', 'write_en', 'write_rdy', 
-                       'read_en', 'read_rdy', 'write_data', 'read_data']:
-                if hasattr(dut, sig):
-                    val = getattr(dut, sig).value
-                    cocotb.log.info(f"{sig:15} = {val}")
-
-    # Clock generation
+    # Clock generation with phase offset for clearer waveforms
     clock = Clock(dut.clk, CLK_PERIOD_NS, units="ns")
-    cocotb.start_soon(clock.start(start_high=False))
+    cocotb.start_soon(clock.start(start_high=False, phase=5))  # 5ns phase for edge visibility
     
     # Initialize
     dut.reset_n.value = 0
     dut.write_en.value = 0
     dut.read_en.value = 0
-    dut.write_address.value = 0
     dut.write_data.value = 0
+    dut.write_address.value = 0
     dut.read_address.value = 0
     
-    # Reset sequence
-    cocotb.log.info("Applying reset...")
+    # Reset sequence with waveform markers
+    await Timer(1, 'ns')  # Initial delay for waveform clarity
     for _ in range(RESET_CYCLES):
         await RisingEdge(dut.clk)
     dut.reset_n.value = 1
+    await Timer(2, 'ns')  # Padding for waveform viewer
+    
+    # Post-reset checks
+    assert dut.reset_n.value == 1, "Reset not deasserted"
     await RisingEdge(dut.clk)
-    log_signals()
     
-    # Wait for initial ready signals (more robust)
-    if hasattr(dut, 'write_rdy'):
-        await cocotb.triggers.First(dut.write_rdy.value == 1, Timer(CLK_PERIOD_NS*10, 'ns'))
-        assert dut.write_rdy.value == 1, "Write not ready after reset"
-    
-    if hasattr(dut, 'read_rdy'):
-        await cocotb.triggers.First(dut.read_rdy.value == 1, Timer(CLK_PERIOD_NS*10, 'ns'))
-        assert dut.read_rdy.value == 1, "Read not ready after reset"
-    
-    # Test cases
-    test_cases = [
-        (0, 0x55),
-        (1, 0xAA),
-        (2, 0x01),
-        (3, 0x80)
+    # Test data with distinctive patterns
+    test_vectors = [
+        (0, 0x55),  # 01010101 - alternating bits
+        (1, 0xAA),  # 10101010 - inverse pattern
+        (2, 0x01),  # 00000001 - single bit set
+        (3, 0x80)   # 10000000 - high bit set
     ]
     
-    for addr, data in test_cases:
-        # Write operation with proper handshake
-        cocotb.log.info(f"\n=== Writing 0x{data:02X} to addr {addr} ===")
-        
+    for addr, data in test_vectors:
+        # --- Write Operation ---
         # Wait for write ready with timeout
-        timeout = TIMEOUT_CYCLES
+        timeout = 20
         while dut.write_rdy.value != 1 and timeout > 0:
             await RisingEdge(dut.clk)
             timeout -= 1
-        assert timeout > 0, "Timeout waiting for write_rdy"
+        assert timeout > 0, f"Timeout waiting for write_rdy @ addr {addr}"
         
-        # Perform write
+        # Setup write with clean timing
+        await FallingEdge(dut.clk)  # Setup during clock low
         dut.write_address.value = addr
         dut.write_data.value = data
+        await Timer(1, 'ns')  # Hold before edge
         dut.write_en.value = 1
+        
+        # Execute write
         await RisingEdge(dut.clk)
+        await Timer(1, 'ns')  # Hold after edge
         dut.write_en.value = 0
-        log_signals()
         
-        # Read operation with proper handshake
-        cocotb.log.info(f"\n=== Reading from addr {addr} ===")
-        
-        # Wait for read ready with timeout
-        timeout = TIMEOUT_CYCLES
+        # --- Read Operation ---
+        # Wait for read ready
+        timeout = 20
         while dut.read_rdy.value != 1 and timeout > 0:
             await RisingEdge(dut.clk)
             timeout -= 1
-        assert timeout > 0, "Timeout waiting for read_rdy"
+        assert timeout > 0, f"Timeout waiting for read_rdy @ addr {addr}"
         
-        # Perform read
+        # Setup read
+        await FallingEdge(dut.clk)
         dut.read_address.value = addr
+        await Timer(1, 'ns')
         dut.read_en.value = 1
+        
+        # Execute read
         await RisingEdge(dut.clk)
+        await Timer(1, 'ns')
         dut.read_en.value = 0
-        log_signals()
         
-        # Wait for valid data (if needed)
-        await RisingEdge(dut.clk)
+        # Validate read data
+        await RisingEdge(dut.clk)  # Allow 1 cycle for data
+        await Timer(2, 'ns')  # Sampling delay
         
-        # Check read data
-        read_val = dut.read_data.value
-        if not read_val.is_resolvable:
-            assert False, f"Read data is unresolved: {read_val}"
+        # Enhanced error reporting
+        observed = dut.read_data.value
+        if not observed.is_resolvable:
+            assert False, (f"Unresolved read data @ {get_sim_time()} ps: "
+                          f"{observed.binstr} (address {addr})")
         
-        read_int = read_val.integer
-        assert read_int == data, (
-            f"Data mismatch at addr {addr}: "
-            f"Expected 0x{data:02X}, got 0x{read_int:02X}\n"
-            f"Binary: {read_val.binstr}"
+        assert observed.integer == data, (
+            f"Data mismatch @ {get_sim_time()} ps (address {addr}):\n"
+            f"Expected: {bin(data)} (0x{data:02X})\n"
+            f"Observed: {observed.binstr} (0x{observed.integer:02X})\n"
+            f"Write timing: {dut.write_en.value} (en) | {dut.write_rdy.value} (rdy)\n"
+            f"Read timing:  {dut.read_en.value} (en) | {dut.read_rdy.value} (rdy)"
         )
-        
-        cocotb.log.info(f"Verified addr {addr} successfully")
     
-    cocotb.log.info("All tests passed!")
+    # Final check for FIFO empty state
+    await RisingEdge(dut.clk)
+    assert dut.read_rdy.value == 1, "FIFO not empty after all reads"
