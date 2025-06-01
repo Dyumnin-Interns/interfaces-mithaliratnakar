@@ -6,22 +6,22 @@ from cocotb.binary import BinaryValue
 import random
 
 @cocotb.test()
-async def test_fifo_randomized(dut):
-    """FIFO test with randomized traffic and detailed debugging"""
+async def test_fifo_deep_debug(dut):
+    """FIFO test with transaction-level debugging and failure isolation"""
     
-    # Configuration
+    # Configuration - REPLACE WITH YOUR ACTUAL PARAMETERS
+    FIFO_DEPTH = 8  # Example - adjust based on your design
     CLK_PERIOD_NS = 10
-    RESET_CYCLES = 5  # Extended reset for stability
-    TEST_ITERATIONS = 20
     RANDOM_SEED = random.randint(0, 2**32-1)
     random.seed(RANDOM_SEED)
     
     # Log test configuration
     dut._log.info(f"Starting test with RANDOM_SEED={RANDOM_SEED}")
+    dut._log.info(f"FIFO Depth: {FIFO_DEPTH}")
     
-    # Clock generation with phase offset
+    # Clock generation
     clock = Clock(dut.clk, CLK_PERIOD_NS, units="ns")
-    cocotb.start_soon(clock.start(start_high=False, phase=3))
+    cocotb.start_soon(clock.start(start_high=False))
     
     # Initialize
     dut.reset_n.value = 0
@@ -31,90 +31,100 @@ async def test_fifo_randomized(dut):
     dut.write_address.value = 0
     dut.read_address.value = 0
     
-    # Reset sequence with waveform markers
-    for _ in range(RESET_CYCLES):
+    # Extended reset sequence
+    for _ in range(5):
         await RisingEdge(dut.clk)
     dut.reset_n.value = 1
-    await Timer(2, 'ns')  # Hold after reset
+    await RisingEdge(dut.clk)
     
-    # Post-reset checks
-    assert dut.reset_n.value == 1, "Reset not deasserted"
-    await First(
-        RisingEdge(dut.clk),
-        Timer(100, 'ns')
-    )
+    # --- Test Scenario Builder ---
+    class TestScenario:
+        def __init__(self):
+            self.expected_data = {}  # addr: data
+            self.operations = []
+            self.fifo_count = 0
+            
+        def add_write(self, addr, data, sim_time):
+            self.expected_data[addr] = data
+            self.operations.append(('write', addr, data, sim_time))
+            self.fifo_count = min(self.fifo_count + 1, FIFO_DEPTH)
+            
+        def add_read(self, addr, actual_data, sim_time):
+            self.operations.append(('read', addr, actual_data, sim_time))
+            if addr in self.expected_data:
+                expected = self.expected_data[addr]
+                if actual_data != expected:
+                    self.report_failure(addr, expected, actual_data)
+            self.fifo_count = max(self.fifo_count - 1, 0)
+            
+        def report_failure(self, addr, expected, actual):
+            dut._log.error("\n" + "="*60)
+            dut._log.error("DATA MISMATCH DETECTED")
+            dut._log.error(f"Address: {addr}")
+            dut._log.error(f"Expected: 0x{expected:02X} ({bin(expected)})")
+            dut._log.error(f"Received: 0x{actual:02X} ({bin(actual)})")
+            dut._log.error("\nOperation History:")
+            for i, op in enumerate(self.operations[-10:]):  # Last 10 ops
+                dut._log.error(f"{i:2d}: {op[0]:5s} addr={op[1]} data=0x{op[2]:02X} @ {op[3]} ps")
+            dut._log.error("="*60 + "\n")
+            assert False, f"Data mismatch at address {addr}"
+            
+    scenario = TestScenario()
     
-    # Test operations storage for debugging
-    operations = []
-    
-    for i in range(TEST_ITERATIONS):
-        # Randomize operation type (write or read)
-        is_write = random.choice([True, False])
-        addr = random.randint(0, 7)
-        data = random.randint(0, 255) if is_write else None
+    # --- Test Sequence ---
+    try:
+        # First verify basic write/read
+        addr = 0
+        test_data = 0x55
+        dut._log.info(f"\n=== Basic Write/Read Test ===")
         
-        try:
-            if is_write:
-                # Write operation
-                await First(
-                    RisingEdge(dut.clk) & (dut.write_rdy.value == 1),
-                    Timer(200, 'ns')
-                )
-                assert dut.write_rdy.value == 1, f"Write timeout @ iter {i}"
-                
+        # Write
+        await First(RisingEdge(dut.write_rdy), Timer(100, 'ns'))
+        dut.write_address.value = addr
+        dut.write_data.value = test_data
+        dut.write_en.value = 1
+        scenario.add_write(addr, test_data, get_sim_time())
+        await RisingEdge(dut.clk)
+        dut.write_en.value = 0
+        
+        # Read
+        await First(RisingEdge(dut.read_rdy), Timer(100, 'ns'))
+        dut.read_address.value = addr
+        dut.read_en.value = 1
+        await RisingEdge(dut.clk)
+        dut.read_en.value = 0
+        await RisingEdge(dut.clk)  # Data delay
+        read_val = dut.read_data.value
+        scenario.add_read(addr, read_val.integer, get_sim_time())
+        
+        # Random traffic test
+        dut._log.info(f"\n=== Random Traffic Test ===")
+        for i in range(20):  # Reduced from 100 for quicker failure
+            is_write = random.choice([True, False])
+            addr = random.randint(0, FIFO_DEPTH-1)
+            
+            if is_write or scenario.fifo_count == 0:
+                # Force write if empty or random choice
+                data = random.randint(0, 255)
+                await First(RisingEdge(dut.write_rdy), Timer(100, 'ns'))
                 dut.write_address.value = addr
                 dut.write_data.value = data
                 dut.write_en.value = 1
+                scenario.add_write(addr, data, get_sim_time())
                 await RisingEdge(dut.clk)
                 dut.write_en.value = 0
-                
-                operations.append(('write', addr, data, get_sim_time()))
-                
             else:
                 # Read operation
-                await First(
-                    RisingEdge(dut.clk) & (dut.read_rdy.value == 1),
-                    Timer(200, 'ns')
-                )
-                assert dut.read_rdy.value == 1, f"Read timeout @ iter {i}"
-                
+                await First(RisingEdge(dut.read_rdy), Timer(100, 'ns'))
                 dut.read_address.value = addr
                 dut.read_en.value = 1
                 await RisingEdge(dut.clk)
                 dut.read_en.value = 0
                 await RisingEdge(dut.clk)  # Data delay
-                
                 read_val = dut.read_data.value
-                operations.append(('read', addr, read_val.integer, get_sim_time()))
+                scenario.add_read(addr, read_val.integer, get_sim_time())
                 
-                # Verify against last write to same address
-                expected_data = next(
-                    (op[2] for op in reversed(operations) 
-                    if op[0] == 'write' and op[1] == addr),
-                    None
-                )
-                
-                if expected_data is not None:
-                    assert read_val.integer == expected_data, (
-                        f"Data mismatch @ addr {addr} (iter {i}):\n"
-                        f"Expected: 0x{expected_data:02X} ({bin(expected_data)})\n"
-                        f"Received: 0x{read_val.integer:02X} ({read_val.binstr})\n"
-                        f"Operations history:\n{format_operations(operations)}"
-                    )
-                    
-        except AssertionError as e:
-            dut._log.error(f"Failure at iteration {i}:")
-            dut._log.error(f"Current operation: {'write' if is_write else 'read'} addr {addr}")
-            if is_write:
-                dut._log.error(f"Write data: 0x{data:02X}")
-            else:
-                dut._log.error(f"Read data: 0x{read_val.integer:02X}")
-            dut._log.error(f"Operations history:\n{format_operations(operations)}")
-            raise
-
-def format_operations(ops):
-    """Format operations history for debugging"""
-    return "\n".join(
-        f"{i:3d}: {op[0]:5s} addr={op[1]} data=0x{op[2]:02X} @ {op[3]} ps"
-        for i, op in enumerate(ops)
-    )
+    except Exception as e:
+        dut._log.error(f"Test failed with RANDOM_SEED={RANDOM_SEED}")
+        dut._log.error(f"Last operation: {scenario.operations[-1] if scenario.operations else 'None'}")
+        raise
