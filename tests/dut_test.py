@@ -15,30 +15,30 @@ async def test_fifo_deep_debug(dut):
     dut.write_en.value = 0
     dut.read_en.value = 0
     await Timer(100, units="ns")
-    dut.R.value = 1
-    await RisingEdge(dut.CLK)
+    dut.resert_n.value = 1
+    await RisingEdge(dut.clk)
 
     # Write 1-bit values to a_ff (addr=4) and b_ff (addr=5)
     dut.write_en.value = 1
     dut.write_address.value = 4
     dut.write_data.value = 1
-    await RisingEdge(dut.CLK)
+    await RisingEdge(dut.clk)
 
     dut.write_address.value = 5
     dut.write_data.value = 1
-    await RisingEdge(dut.CLK)
+    await RisingEdge(dut.clk)
 
     dut.write_en.value = 0
-    await RisingEdge(dut.CLK)
+    await RisingEdge(dut.clk)
 
     # Wait for counter to hit 50
     for _ in range(55):
-        await RisingEdge(dut.CLK)
+        await RisingEdge(dut.clk)
 
     # Read from y_ff.D_OUT (addr = 3)
     dut.read_address.value = 3
     dut.read_en.value = 1
-    await RisingEdge(dut.CLK)
+    await RisingEdge(dut.clk)
     actual_val = dut.read_data.value.integer
     dut.read_en.value = 0
 
