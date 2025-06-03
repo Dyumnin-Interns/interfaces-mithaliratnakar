@@ -15,7 +15,7 @@ async def test_fifo_deep_debug(dut):
     dut.write_en.value = 0
     dut.read_en.value = 0
     await Timer(100, units="ns")
-    dut.resert_n.value = 1
+    dut.reset_n.value = 1
     await RisingEdge(dut.clk)
 
     # Write 1-bit values to a_ff (addr=4) and b_ff (addr=5)
