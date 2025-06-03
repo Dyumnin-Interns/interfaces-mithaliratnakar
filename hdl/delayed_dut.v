@@ -22,7 +22,8 @@ module dut(
   input  read_en,
   output reg [7:0] read_data,
   output read_rdy,
-  output [7:0] counter_out
+  output [7:0] counter_out,
+  output wire a_ff_EMPTY_N
 );
 
   // Declare internal wires and regs
