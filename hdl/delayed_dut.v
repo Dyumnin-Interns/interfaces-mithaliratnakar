@@ -36,7 +36,6 @@ module dut(
   wire a_ff_DEQ;
   wire [7:0] a_ff_D_IN;
   wire [7:0] a_ff_D_OUT;
-  wire a_ff_EMPTY_N;
   wire a_ff_ENQ;
   wire a_ff_FULL_N;
 
