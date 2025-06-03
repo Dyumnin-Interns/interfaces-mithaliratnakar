@@ -1,16 +1,16 @@
 module dut_wrapper (
-  input CLK,
-  input RST_N,
-  input [2:0] write_address,
-  input [7:0] write_data,
-  input write_en,
-  output write_rdy,
-  input [2:0] read_address,
-  input read_en,
-  output [7:0] read_data,
-  output read_rdy,
-  output [7:0] counter_out,
-  output a_ff_EMPTY_N
+  input wire CLK,
+  input wire RST_N,
+  input wire [2:0] write_address,
+  input wire [7:0] write_data,
+  input wire write_en,
+  output wire write_rdy,
+  input wire [2:0] read_address,
+  input wire read_en,
+  output wire [7:0] read_data,
+  output wire read_rdy,
+  output wire [7:0] counter_out,
+  output wire a_ff_EMPTY_N
 );
 
   wire [7:0] internal_read_data;
@@ -35,19 +35,14 @@ module dut_wrapper (
   );
 
   assign a_ff_EMPTY_N = a_ff_EMPTY_N_internal;
-
   assign read_data = internal_read_data;
   assign read_rdy = internal_read_rdy;
   assign write_rdy = internal_write_rdy;
   assign counter_out = internal_counter_out;
 
-endmodule
-
-
-initial begin
+  initial begin
     $dumpfile("waveform.vcd");
     $dumpvars(0, dut_wrapper);
-end
+  end
 
 endmodule
-
