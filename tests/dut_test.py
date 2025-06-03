@@ -53,8 +53,14 @@ async def test_fifo_deep_debug(dut):
     dut._log.info("Waiting for counter to reach 50 and y_ff to enqueue...")
     for i in range(55): # Wait for 55 clock cycles (50 for counter + a few extra)
         await RisingEdge(dut.clk)
-        # Optional: Log counter value for debugging
-        # dut._log.info(f"Cycle {i+1}: Counter = {dut.counter.value.integer}")
+        # Log critical internal signals to debug y_ff enqueue condition
+        dut._log.info(
+            f"Cycle {i+1} (Counter: {dut.counter.value.integer}): "
+            f"a_ff_empty_n={dut.a_ff_empty_n.value.integer}, "
+            f"b_ff_empty_n={dut.b_ff_empty_n.value.integer}, "
+            f"y_ff_enq={dut.y_ff_enq.value.integer}, "
+            f"y_ff_din={dut.y_ff_din.value.integer}"
+        )
 
 
     # Read from y_ff (address 3)
@@ -62,6 +68,10 @@ async def test_fifo_deep_debug(dut):
     dut.read_address.value = 3
     dut.read_en.value = 1
     await RisingEdge(dut.clk) # Wait for the read to propagate
+
+    # Log y_ff_dout just before reading
+    dut._log.info(f"Before final read: y_ff_dout = {dut.y_ff_dout.value.integer}")
+
     actual_val = dut.read_data.value.integer
     dut.read_en.value = 0 # Deassert read enable
 
