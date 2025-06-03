@@ -28,7 +28,7 @@ module dut (
 
   wire fifo_reset = ~RST_N;
 
-  wire a_ff_enq, a_ff_deq, a_ff_clr, a_ff_full_n, a_ff_EMPTY_N;
+  wire a_ff_enq, a_ff_deq, a_ff_clr, a_ff_full_n;
   wire [7:0] a_ff_din, a_ff_dout;
 
   wire b_ff_enq, b_ff_deq, b_ff_clr, b_ff_full_n, b_ff_EMPTY_N;
