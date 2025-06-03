@@ -11,20 +11,21 @@ module dut_wrapper (
 );
 
 dut u_dut (
-    .clk(clk),
-    .reset_n(reset_n),
+    .CLK(clk),
+    .RST_N(reset_n),
     .write_en(write_en),
     .write_address(write_address),
     .write_data(write_data),
     .read_en(read_en),
     .read_address(read_address),
     .read_data(read_data),
-    .counter_out(counter_out) 
+    .counter_out(counter_out)
 );
 
-    
-    initial begin
-        $dumpfile("waveform.vcd");
-        $dumpvars(0, dut_wrapper);
-    end
+initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars(0, dut_wrapper);
+end
+
 endmodule
+
