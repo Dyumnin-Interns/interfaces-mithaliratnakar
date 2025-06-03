@@ -5,7 +5,7 @@ from cocotb.triggers import RisingEdge, Timer
 @cocotb.test()
 async def test_fifo_deep_debug(dut):
     """Test writing to a_ff and b_ff, then reading from y_ff."""
-    clock = Clock(dut.clk, 10, units="ns")
+    clock = Clock(dut.CLK, 10, units="ns")
     cocotb.start_soon(clock.start())
 
 
