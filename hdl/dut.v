@@ -24,9 +24,9 @@ module dut (
     output wire        read_rdy,
     output wire [7:0]  counter_out,
     output wire        a_ff_EMPTY_N,
-    output wire [7:0]  y_ff_din,
-    output wire        y_ff_enq
+    output wire        b_ff_EMPTY_N    
 );
+
 
   wire fifo_reset = ~RST_N;
 
