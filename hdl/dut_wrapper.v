@@ -1,52 +1,46 @@
 module dut_wrapper (
-  input wire CLK,
-  input wire RST_N,
-  input wire [2:0] write_address,
-  input wire [7:0] write_data,
-  input wire write_en,
-  output wire write_rdy,
-  input wire [2:0] read_address,
-  input wire read_en,
-  output wire [7:0] read_data,
-  output wire read_rdy,
-  output wire [7:0] counter_out,
-  output wire a_ff_EMPTY_N,
-  output wire b_ff_EMPTY_N           
+    input  wire          CLK,
+    input  wire          RST,
+    input  wire          CLR,
+    input  wire          FIFO1_ENQ,
+    input  wire          FIFO1_DEQ,
+    input  wire [7:0]    FIFO1_D_IN,
+    output wire          FIFO1_FULL_N,
+    output wire          FIFO1_EMPTY_N,
+    output wire [7:0]    FIFO1_D_OUT,
+    input  wire          FIFO2_ENQ,
+    input  wire          FIFO2_DEQ,
+    input  wire [7:0]    FIFO2_D_IN,
+    output wire          FIFO2_FULL_N,
+    output wire          FIFO2_EMPTY_N,
+    output wire [7:0]    FIFO2_D_OUT
 );
-
-
-  wire [7:0] internal_read_data;
-  wire internal_read_rdy;
-  wire internal_write_rdy;
-  wire [7:0] internal_counter_out;
-  wire a_ff_EMPTY_N_internal;
-  wire b_ff_EMPTY_N_internal;         
-
-  
-  dut u_dut (
-    .CLK(CLK),
-    .RST_N(RST_N),
-    .write_address(write_address),
-    .write_data(write_data),
-    .write_en(write_en),
-    .write_rdy(internal_write_rdy),
-    .read_address(read_address),
-    .read_en(read_en),
-    .read_data(internal_read_data),
-    .read_rdy(internal_read_rdy),
-    .counter_out(internal_counter_out),
-    .a_ff_EMPTY_N(a_ff_EMPTY_N_internal),
-    .b_ff_EMPTY_N(b_ff_EMPTY_N_internal) 
-  );
-
-
-  assign a_ff_EMPTY_N = a_ff_EMPTY_N_internal;
-  assign b_ff_EMPTY_N = b_ff_EMPTY_N_internal; 
-  assign read_data = internal_read_data;
-  assign read_rdy = internal_read_rdy;
-  assign write_rdy = internal_write_rdy;
-  assign counter_out = internal_counter_out;
-
+    FIFO1 #(
+        .width(8)
+    ) fifo1_inst (
+        .CLK(CLK),
+        .RST(RST),
+        .CLR(CLR),
+        .ENQ(FIFO1_ENQ),
+        .DEQ(FIFO1_DEQ),
+        .D_IN(FIFO1_D_IN),
+        .FULL_N(FIFO1_FULL_N),
+        .EMPTY_N(FIFO1_EMPTY_N),
+        .D_OUT(FIFO1_D_OUT)
+    );
+    FIFO2 #(
+        .width(8)
+    ) fifo2_inst (
+        .CLK(CLK),
+        .RST(RST),
+        .CLR(CLR),
+        .ENQ(FIFO2_ENQ),
+        .DEQ(FIFO2_DEQ),
+        .D_IN(FIFO2_D_IN),
+        .FULL_N(FIFO2_FULL_N),
+        .EMPTY_N(FIFO2_EMPTY_N),
+        .D_OUT(FIFO2_D_OUT)
+    );
 
   initial begin
     $dumpfile("waveform.vcd");
