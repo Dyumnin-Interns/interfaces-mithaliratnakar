@@ -27,20 +27,29 @@ async def test_fifo_deep_debug(dut):
     dut.write_en.value = 1
 
     # Write to a_ff (use address 0 as per dut.v)
-    dut.write_address.value = 0 # CORRECTED: Changed from 4 to 0
+    dut.write_address.value = 0
     dut.write_data.value = 1
+    await RisingEdge(dut.clk) # Wait for the value to propagate
+    # Log the value AFTER it has propagated
     dut._log.info(f"Writing {dut.write_data.value.integer} to a_ff (addr {dut.write_address.value.integer})")
-    await RisingEdge(dut.clk)
 
     # Write to b_ff (address 5)
     dut.write_address.value = 5
     dut.write_data.value = 1
+    await RisingEdge(dut.clk) # Wait for the value to propagate
+    # Log the value AFTER it has propagated
     dut._log.info(f"Writing {dut.write_data.value.integer} to b_ff (addr {dut.write_address.value.integer})")
-    await RisingEdge(dut.clk)
 
     dut.write_en.value = 0 # Deassert write enable
     await RisingEdge(dut.clk) # Wait one more clock cycle
 
+    # Wait for counter to hit 50
+    # The y_ff_enq signal in dut.v depends on counter == 8'd50
+    # and both a_ff and b_ff being non-empty.
+    # We need to ensure enough cycles pass for the counter to increment.
+    # The counter increments every cycle if counter$EN is 1'd1.
+    # So, 50 cycles are needed for counter to reach 50 (from 0 after reset).
+    # Adding a few extra cycles for safety and propagation.
     dut._log.info("Waiting for counter to reach 50 and y_ff to enqueue...")
     for i in range(55): # Wait for 55 clock cycles (50 for counter + a few extra)
         await RisingEdge(dut.clk)
@@ -59,6 +68,7 @@ async def test_fifo_deep_debug(dut):
     # Expected value: 1 (from a_ff) bitwise OR 1 (from b_ff) = 1
     expected_val = 1 | 1
     
+    # Assert that the actual value matches the expected value
     assert actual_val == expected_val, f"Mismatch: expected {expected_val}, got {actual_val}"
 
     dut._log.info(f"Test passed. y_ff output = {actual_val}")
