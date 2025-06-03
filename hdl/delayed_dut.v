@@ -61,28 +61,30 @@ module dut(CLK,
   wire a_data$whas, b_data$whas, pwyff_deq$whas;
   reg [7 : 0] counter;
   wire [7 : 0] counter$D_IN;
-  wire counter$EN;
-  wire a_ff$CLR,
-  wire a_ff$DEQ,
-  wire	[7:0] a_ff$D_IN,
-  wire	[7:0] a_ff$D_OUT,
-  wire  a_ff$EMPTY_N,
-  wire  a_ff$ENQ,
-  wire  a_ff$FULL_N;
-  wire  b_ff$CLR,
-  wire  b_ff$DEQ,
-  wire	[7:0] b_ff$D_IN,
-  wire	[7:0] b_ff$D_OUT,
-  wire  b_ff$EMPTY_N,
-  wire  b_ff$ENQ,
-  wire  b_ff$FULL_N;
-  wire  y_ff$CLR,
-  wire  y_ff$DEQ,
-  wire	[7:0] y_ff$D_IN,
-  wire	[7:0] y_ff$D_OUT,
-  wire  y_ff$EMPTY_N,
-  wire  y_ff$ENQ,
-  wire  y_ff$FULL_N;
+  wire a_ff$CLR;
+  wire a_ff$DEQ;
+  wire [7:0] a_ff$D_IN;
+  wire [7:0] a_ff$D_OUT;
+  wire a_ff$EMPTY_N;
+  wire a_ff$ENQ;
+  wire a_ff$FULL_N;
+
+  wire b_ff$CLR;
+  wire b_ff$DEQ;
+  wire [7:0] b_ff$D_IN;
+  wire [7:0] b_ff$D_OUT;
+  wire b_ff$EMPTY_N;
+  wire b_ff$ENQ;
+  wire b_ff$FULL_N;
+
+  wire y_ff$CLR;
+  wire y_ff$DEQ;
+  wire [7:0] y_ff$D_IN;
+  wire [7:0] y_ff$D_OUT;
+  wire y_ff$EMPTY_N;
+  wire y_ff$ENQ;
+  wire y_ff$FULL_N;
+
   assign write_rdy = 1'd1 ;
   always@(read_address or
 	  y_ff$EMPTY_N or y_ff$D_OUT or a_ff$FULL_N or b_ff$FULL_N)
@@ -128,33 +130,24 @@ module dut(CLK,
   assign a_data$whas = write_en && write_address == 3'd4 ;
   assign b_data$whas = write_en && write_address == 3'd5 ;
   assign pwyff_deq$whas = read_en && read_address == 3'd3 ;
-
-  // register counter
   assign counter$D_IN = counter + 8'd1 ;
   assign counter$EN = 1'd1 ;
 
-  // submodule a_ff
   assign a_ff$D_IN = write_data ; // This will now take the full 8 bits if needed
   assign a_ff$ENQ = a_ff$FULL_N && a_data$whas ;
   assign a_ff$DEQ =
 	       y_ff$FULL_N && a_ff$EMPTY_N && b_ff$EMPTY_N && counter == 8'd50 ;
   assign a_ff$CLR = 1'b0 ;
-
-  // submodule b_ff
   assign b_ff$D_IN = write_data ; // This will now take the full 8 bits if needed
   assign b_ff$ENQ = b_ff$FULL_N && b_data$whas ;
   assign b_ff$DEQ =
 	       y_ff$FULL_N && a_ff$EMPTY_N && b_ff$EMPTY_N && counter == 8'd50 ;
   assign b_ff$CLR = 1'b0 ;
-
-  // submodule y_ff
   assign y_ff$D_IN = a_ff$D_OUT | b_ff$D_OUT ;
   assign y_ff$ENQ =
 	       y_ff$FULL_N && a_ff$EMPTY_N && b_ff$EMPTY_N && counter == 8'd50 ;
   assign y_ff$DEQ = y_ff$EMPTY_N && pwyff_deq$whas ;
   assign y_ff$CLR = 1'b0 ;
-
-  // handling of inlined registers
 
   always@(posedge CLK or `BSV_RESET_EDGE RST_N)
   if (RST_N == `BSV_RESET_VALUE)
@@ -166,13 +159,11 @@ module dut(CLK,
       if (counter$EN) counter <= `BSV_ASSIGNMENT_DELAY counter$D_IN;
     end
 
-  // synopsys translate_off
   `ifdef BSV_NO_INITIAL_BLOCKS
-  `else // not BSV_NO_INITIAL_BLOCKS
+  `else 
   initial
   begin
     counter = 8'hAA;
   end
-  `endif // BSV_NO_INITIAL_BLOCKS
-  // synopsys translate_on
-endmodule  // dut
+  `endif 
+endmodule  
