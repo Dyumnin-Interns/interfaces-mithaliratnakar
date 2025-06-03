@@ -7,15 +7,15 @@ from cocotb.result import TestFailure
 async def test_fifo_deep_debug(dut):
     """Test writing to a_ff and b_ff, then reading from y_ff."""
 
-    clock = Clock(dut.CLK, 10, units="ns")
+    clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Reset
-    dut.RST_N.value = 0
+    dut.reset_n.value = 0
     dut.write_en.value = 0
     dut.read_en.value = 0
     await Timer(100, units="ns")
-    dut.RST_N.value = 1
+    dut.R.value = 1
     await RisingEdge(dut.CLK)
 
     # Write 1-bit values to a_ff (addr=4) and b_ff (addr=5)
