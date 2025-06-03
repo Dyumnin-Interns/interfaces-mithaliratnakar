@@ -11,7 +11,7 @@
 // CLK                 I     1 clock
 // RST_N               I     1 reset
 // write_address       I     3
-// write_data          I     8 reg  // <--- CHANGED FROM 1 TO 8
+// write_data          I     8 reg  
 // read_address        I     3
 // write_en            I     1
 // read_en             I     1
@@ -48,76 +48,55 @@ module dut(CLK,
 	   read_rdy);
   input  CLK;
   input  RST_N;
-
-  // action method write
   input  [2 : 0] write_address;
-  input  [7 : 0] write_data; // <--- CHANGED FROM "input write_data;" to "input [7 : 0] write_data;"
+  input  [7 : 0] write_data; 
   input  write_en;
   output write_rdy;
-
-  // actionvalue method read
   input  [2 : 0] read_address;
   input  read_en;
-  output read_data;
+  output [7:0] read_data;
   output read_rdy;
-
-  // signals for module outputs
-  reg read_data;
+  reg [7:0] read_data;
   wire read_rdy, write_rdy;
-
-  // inlined wires
   wire a_data$whas, b_data$whas, pwyff_deq$whas;
-
-  // register counter
   reg [7 : 0] counter;
   wire [7 : 0] counter$D_IN;
   wire counter$EN;
-
-  // ports of submodule a_ff
   wire a_ff$CLR,
-       a_ff$DEQ,
-       a_ff$D_IN,
-       a_ff$D_OUT,
-       a_ff$EMPTY_N,
-       a_ff$ENQ,
-       a_ff$FULL_N;
-
-  // ports of submodule b_ff
-  wire b_ff$CLR,
-       b_ff$DEQ,
-       b_ff$D_IN,
-       b_ff$D_OUT,
-       b_ff$EMPTY_N,
-       b_ff$ENQ,
-       b_ff$FULL_N;
-
-  // ports of submodule y_ff
-  wire y_ff$CLR,
-       y_ff$DEQ,
-       y_ff$D_IN,
-       y_ff$D_OUT,
-       y_ff$EMPTY_N,
-       y_ff$ENQ,
-       y_ff$FULL_N;
-
-  // action method write
+  wire a_ff$DEQ,
+  wire	[7:0] a_ff$D_IN,
+  wire	[7:0] a_ff$D_OUT,
+  wire  a_ff$EMPTY_N,
+  wire  a_ff$ENQ,
+  wire  a_ff$FULL_N;
+  wire  b_ff$CLR,
+  wire  b_ff$DEQ,
+  wire	[7:0] b_ff$D_IN,
+  wire	[7:0] b_ff$D_OUT,
+  wire  b_ff$EMPTY_N,
+  wire  b_ff$ENQ,
+  wire  b_ff$FULL_N;
+  wire  y_ff$CLR,
+  wire  y_ff$DEQ,
+  wire	[7:0] y_ff$D_IN,
+  wire	[7:0] y_ff$D_OUT,
+  wire  y_ff$EMPTY_N,
+  wire  y_ff$ENQ,
+  wire  y_ff$FULL_N;
   assign write_rdy = 1'd1 ;
-
-  // actionvalue method read
   always@(read_address or
 	  y_ff$EMPTY_N or y_ff$D_OUT or a_ff$FULL_N or b_ff$FULL_N)
   begin
     case (read_address)
-      3'd0: read_data = a_ff$FULL_N;
-      3'd1: read_data = b_ff$FULL_N;
-      3'd2: read_data = y_ff$EMPTY_N;
-      default: read_data = read_address == 3'd3 && y_ff$EMPTY_N && y_ff$D_OUT;
+	    3'd0: read_data = {7'd0,a_ff$FULL_N};
+	    3'd1: read_data = {7'd0,b_ff$FULL_N};
+	    3'd2: read_data = {7'd0,y_ff$EMPTY_N};
+	    3'd3: read_data = y_ff$EMPTY_N ? y_ff$D_OUT : 8'd0;
+      default: read_data = 8'b0;
     endcase
   end
   assign read_rdy = 1'd1 ;
-
-  // submodule a_ff
-  FIFO2 #(.width(32'd1)) a_ff(.RST(RST_N),
+	FIFO2 #(.width(32'd8)) a_ff(.RST(RST_N),
 					   .CLK(CLK),
 					   .D_IN(a_ff$D_IN),
 					   .ENQ(a_ff$ENQ),
@@ -127,8 +106,7 @@ module dut(CLK,
 					   .FULL_N(a_ff$FULL_N),
 					   .EMPTY_N(a_ff$EMPTY_N));
 
-  // submodule b_ff
-  FIFO1 #(.width(32'd1)) b_ff(.RST(RST_N),
+	FIFO1 #(.width(32'd8)) b_ff(.RST(RST_N),
 					   .CLK(CLK),
 					   .D_IN(b_ff$D_IN),
 					   .ENQ(b_ff$ENQ),
@@ -137,9 +115,7 @@ module dut(CLK,
 					   .D_OUT(b_ff$D_OUT),
 					   .FULL_N(b_ff$FULL_N),
 					   .EMPTY_N(b_ff$EMPTY_N));
-
-  // submodule y_ff
-  FIFO2 #(.width(32'd1)) y_ff(.RST(RST_N),
+	FIFO2 #(.width(32'd8)) y_ff(.RST(RST_N),
 					   .CLK(CLK),
 					   .D_IN(y_ff$D_IN),
 					   .ENQ(y_ff$ENQ),
@@ -149,7 +125,6 @@ module dut(CLK,
 					   .FULL_N(y_ff$FULL_N),
 					   .EMPTY_N(y_ff$EMPTY_N));
 
-  // inlined wires
   assign a_data$whas = write_en && write_address == 3'd4 ;
   assign b_data$whas = write_en && write_address == 3'd5 ;
   assign pwyff_deq$whas = read_en && read_address == 3'd3 ;
@@ -173,7 +148,7 @@ module dut(CLK,
   assign b_ff$CLR = 1'b0 ;
 
   // submodule y_ff
-  assign y_ff$D_IN = a_ff$D_OUT || b_ff$D_OUT ;
+  assign y_ff$D_IN = a_ff$D_OUT | b_ff$D_OUT ;
   assign y_ff$ENQ =
 	       y_ff$FULL_N && a_ff$EMPTY_N && b_ff$EMPTY_N && counter == 8'd50 ;
   assign y_ff$DEQ = y_ff$EMPTY_N && pwyff_deq$whas ;
