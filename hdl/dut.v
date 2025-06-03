@@ -38,12 +38,10 @@ module dut (
   wire a_data_whas = write_en && write_address == 3'd4;
   wire b_data_whas = write_en && write_address == 3'd5;
   wire pwyff_deq_whas = read_en && read_address == 3'd3;
-  wire [7:0] counter_din = counter + 8'd1;
-  wire counter_en = 1'b1;
-
+ 
   reg [7:0] counter;
-  wire [7:0] counter$D_IN = counter + 8'd1;
-  wire counter$EN = 1'b1;
+  wire [7:0] counter_D_IN = counter + 8'd1;
+  wire counter_EN = 1'b1;
   assign counter_out = counter;
   
   FIFO2 #(.width(8)) a_ff (
@@ -64,24 +62,22 @@ module dut (
     .D_OUT(y_ff_dout), .FULL_N(y_ff_full_n), .EMPTY_N(y_ff_EMPTY_N)
   );
 
-  // Ready signals
   assign write_rdy = 1'b1;
   assign read_rdy  = 1'b1;
 
-  // Write logic
   assign a_ff_din = write_data;
-  assign a_ff_enq = a_ff_full_n && a_data$whas;
+  assign a_ff_enq = a_ff_full_n && a_data_whas;
   assign a_ff_deq = read_en && read_address == 3'd0 && a_ff_EMPTY_N;
   assign a_ff_clr = 1'b0;
 
   assign b_ff_din = write_data;
-  assign b_ff_enq = b_ff_full_n && b_data$whas;
+  assign b_ff_enq = b_ff_full_n && b_data_whas;
   assign b_ff_deq = y_ff_full_n && a_ff_EMPTY_N && b_ff_EMPTY_N && counter == 8'd50;
   assign b_ff_clr = 1'b0;
 
   assign y_ff_din = a_ff_dout | b_ff_dout;
   assign y_ff_enq = y_ff_full_n && a_ff_EMPTY_N && b_ff_EMPTY_N && counter == 8'd50;
-  assign y_ff_deq = y_ff_EMPTY_N && pwyff_deq$whas;
+  assign y_ff_deq = y_ff_EMPTY_N && pwyff_deq_whas;
   assign y_ff_clr = 1'b0;
 
   always @(*) begin
@@ -97,8 +93,8 @@ end
   always @(posedge CLK or `BSV_RESET_EDGE RST_N) begin
     if (RST_N == `BSV_RESET_VALUE)
       counter <= `BSV_ASSIGNMENT_DELAY 8'd0;
-    else if (counter$EN)
-      counter <= `BSV_ASSIGNMENT_DELAY counter$D_IN;
+    else if (counter_EN)
+      counter <= `BSV_ASSIGNMENT_DELAY counter_D_IN;
   end
 
   `ifndef BSV_NO_INITIAL_BLOCKS
