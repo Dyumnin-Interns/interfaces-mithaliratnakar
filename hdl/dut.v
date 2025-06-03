@@ -21,7 +21,9 @@ module dut (
     input  wire        read_en,
     output reg  [7:0]  read_data,
     output wire        read_rdy,
-    output wire [7:0]  counter_out
+    output wire [7:0]  counter_out,
+    output wire a_ff_EMPTY_N
+
 );
 
   wire fifo_reset = ~RST_N;
