@@ -1,29 +1,30 @@
 module dut_wrapper (
     input wire CLK,
     input wire RST,
-    input wire [7:0] DATA_IN,
+    input wire [0:0] DATA_IN,     
     input wire WR_EN,
     input wire RD_EN,
-    output wire [7:0] DATA_OUT,
+    input wire CLR,
+    output wire [0:0] DATA_OUT,
     output wire EMPTY,
     output wire FULL
 );
 
-    // Instantiate FIFO1 (change to FIFO2 if needed)
-    FIFO1 fifo_inst (
-        .clk(CLK),
-        .rst(RST),
-        .data_in(DATA_IN),
-        .wr_en(WR_EN),
-        .rd_en(RD_EN),
-        .data_out(DATA_OUT),
-        .empty(EMPTY),
-        .full(FULL)
+    FIFO1 #(.width(1)) fifo_inst (
+        .CLK(CLK),
+        .RST(RST),
+        .D_IN(DATA_IN),
+        .ENQ(WR_EN),
+        .DEQ(RD_EN),
+        .CLR(CLR),
+        .D_OUT(DATA_OUT),
+        .EMPTY_N(EMPTY),
+        .FULL_N(FULL)
     );
 
-  initial begin
-    $dumpfile("waveform.vcd");
-    $dumpvars(0, dut_wrapper);
-  end
+    initial begin
+        $dumpfile("waveform.vcd");
+        $dumpvars(0, dut_wrapper);
+    end
 
 endmodule
