@@ -9,7 +9,7 @@ module dut_wrapper (
     output wire FULL
 );
 
-    
+    // Instantiate FIFO1 (change to FIFO2 if needed)
     FIFO1 fifo_inst (
         .clk(CLK),
         .rst(RST),
@@ -20,9 +20,6 @@ module dut_wrapper (
         .empty(EMPTY),
         .full(FULL)
     );
-
-endmodule
-
 
   initial begin
     $dumpfile("waveform.vcd");
