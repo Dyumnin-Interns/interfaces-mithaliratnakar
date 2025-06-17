@@ -1,33 +1,31 @@
 import cocotb
-from cocotb.triggers import Timer, RisingEdge
-from cocotb.clock import Clock
-
-async def reset_dut(dut):
-    dut.RST.value = 1
-    await Timer(10, units='ns')
-    dut.RST.value = 0
-    await Timer(10, units='ns')
+from cocotb.triggers import RisingEdge
+from env import FifoEnv
 
 @cocotb.test()
-async def dut_test(dut):
-    """Basic FIFO write-read test"""
-    # Start clock
-    cocotb.start_soon(Clock(dut.CLK, 10, units="ns").start())
+async def fifo_write_read_test(dut):
+    env = FifoEnv(dut)
+    await env.start()
 
-    # Reset DUT
-    await reset_dut(dut)
+    test_data = [0x12, 0x34, 0x56]
 
-    # Write some data
-    dut.WR_EN.value = 1
-    dut.DATA_IN.value = 0xA5
+    for val in test_data:
+        # Write one value
+        dut.D_IN.value = val
+        dut.write_en.value = 1
+        await RisingEdge(dut.CLK)
+        dut.write_en.value = 0
+        await RisingEdge(dut.CLK)
+
+        # Register expected value in scoreboard
+        env.scoreboard.add_expected(val)
+        dut._log.info(f"[TEST] Wrote: 0x{val:02X}")
+
+        # Read that value
+        dut.read_en.value = 1
+        await RisingEdge(dut.CLK)
+        dut.read_en.value = 0
+        await RisingEdge(dut.CLK)
+
+    # Allow monitor to complete processing
     await RisingEdge(dut.CLK)
-    dut.WR_EN.value = 0
-
-    # Read back the data
-    dut.RD_EN.value = 1
-    await RisingEdge(dut.CLK)
-    dut.RD_EN.value = 0
-
-    # Wait for output to stabilize
-    await Timer(1, units="ns")
-    assert dut.DATA_OUT.value == 0xA5, f"Expected 0xA5, got {dut.DATA_OUT.value}"
