@@ -11,10 +11,10 @@ async def fifo_write_read_test(dut):
 
     for val in test_data:
         # Write one value
-        dut.D_IN.value = val
-        dut.write_en.value = 1
+        dut.DATA_IN.value = val
+        dut.WR_EN.value = 1
         await RisingEdge(dut.CLK)
-        dut.write_en.value = 0
+        dut.WR_EN.value = 0
         await RisingEdge(dut.CLK)
 
         # Register expected value in scoreboard
@@ -22,9 +22,9 @@ async def fifo_write_read_test(dut):
         dut._log.info(f"[TEST] Wrote: 0x{val:02X}")
 
         # Read that value
-        dut.read_en.value = 1
+        dut.RD_EN.value = 1
         await RisingEdge(dut.CLK)
-        dut.read_en.value = 0
+        dut.RD_EN.value = 0
         await RisingEdge(dut.CLK)
 
     # Allow monitor to complete processing
