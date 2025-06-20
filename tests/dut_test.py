@@ -38,11 +38,11 @@ async def fifo_corner_coverage_test(dut):
     await env.start()
 
     # Bin 1: write_when_empty
-      GNU nano 7.2                                                                   dut_test.py                                                                                dut.DATA_IN.value = 0xAA
+    dut.DATA_IN.value = 0xAA
     dut.WR_EN.value = 1
     dut.RD_EN.value = 0
     await RisingEdge(dut.CLK)
-    env.coverage.sample(dut)  # sample while writing
+    env.coverage.sample(dut)  
     dut.WR_EN.value = 0
     await RisingEdge(dut.CLK)
 
