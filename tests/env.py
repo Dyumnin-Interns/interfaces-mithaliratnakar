@@ -33,12 +33,13 @@ class FifoEnv:
 
     def _start_monitor(self):
         """Start monitor and connect it to scoreboard callback."""
-                self.monitor.set_callback(self.monitor_callback)
+        self.monitor.set_callback(self.monitor_callback)
         cocotb.start_soon(self.monitor.monitor_reads())
 
     async def monitor_callback(self, data):
         self.dut._log.info(f"[MONITOR] Observed read: 0x{data:02X}")
-        if self.scoreboard.expected:
+ if self.scoreboard.expected:
             self.scoreboard.compare(data)
         else:
+            
             pass
