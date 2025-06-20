@@ -1,25 +1,22 @@
-# fifo_monitor.py
-
-from cocotb.triggers import RisingEdge, Event
-
+from cocotb.triggers import Event, RisingEdge
 class FifoMonitor:
     def __init__(self, dut):
         self.dut = dut
-        self.observed_reads = []
         self.read_event = Event()
-        self.last_read_data = None
+        self.last_read_data = 0
+        self._callback = None
+
+    def set_callback(self, callback):
+        self._callback = callback
 
     async def monitor_reads(self):
-        """Watches read_en and captures output data."""
         while True:
             await RisingEdge(self.dut.CLK)
-            if self.dut.RD_EN.value == 1:
-                await RisingEdge(self.dut.CLK)  # Wait for valid data
-                value = int(self.dut.DATA_OUT.value)
-                self.observed_reads.append(value)
-                self.last_read_data = value
+            if self.dut.RD_EN.value and not self.dut.EMPTY.value:
+                self.last_read_data = int(self.dut.DATA_OUT.value)
                 self.read_event.set()
-                self.dut._log.info(f"[MONITOR] Observed read: 0x{value:02X}")
+                if self._callback:
+                    await self._callback(self.last_read_data)
 
 
 
