@@ -38,7 +38,6 @@ class FifoCoverage:
     def report(self):
         print("\n========= FUNCTIONAL COVERAGE REPORT =========")
         total_hit = 0
-              total_hit = 0
         for key, count in self.coverage.items():
             status = "yes" if count > 0 else "no"
             total_hit += 1 if count > 0 else 0
