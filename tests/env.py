@@ -1,6 +1,7 @@
 from driver import FifoDriver
 from monitor import FifoMonitor
 from scoreboard import FifoScoreboard
+from coverage import FifoCoverage
 from cocotb.clock import Clock
 from cocotb.triggers import Timer
 import cocotb
@@ -11,6 +12,7 @@ class FifoEnv:
         self.driver = FifoDriver(dut)
         self.monitor = FifoMonitor(dut)
         self.scoreboard = FifoScoreboard()
+        self.coverage = FifoCoverage()
 
     async def start(self):
         """Start clock, reset, and connect monitor to scoreboard."""
@@ -31,15 +33,12 @@ class FifoEnv:
 
     def _start_monitor(self):
         """Start monitor and connect it to scoreboard callback."""
-        async def monitor_callback():
-            while True:
-                await self.monitor.read_event.wait()
-                data = self.monitor.last_read_data
-                self.monitor.read_event.clear()
-                self.dut._log.info(f"[MONITOR] Observed read: 0x{data:02X}")
-                self.scoreboard.compare(data)
-              
+                self.monitor.set_callback(self.monitor_callback)
         cocotb.start_soon(self.monitor.monitor_reads())
-        cocotb.start_soon(monitor_callback())
 
-
+    async def monitor_callback(self, data):
+        self.dut._log.info(f"[MONITOR] Observed read: 0x{data:02X}")
+        if self.scoreboard.expected:
+            self.scoreboard.compare(data)
+        else:
+            pass
