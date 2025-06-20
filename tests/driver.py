@@ -20,4 +20,3 @@ class FifoDriver:
         await RisingEdge(self.dut.CLK)
         self.dut.write_en.value = 0
         await RisingEdge(self.dut.CLK)
-
