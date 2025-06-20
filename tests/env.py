@@ -38,8 +38,8 @@ class FifoEnv:
 
     async def monitor_callback(self, data):
         self.dut._log.info(f"[MONITOR] Observed read: 0x{data:02X}")
- if self.scoreboard.expected:
+        if self.scoreboard.expected:
             self.scoreboard.compare(data)
         else:
-            
+        
             pass
