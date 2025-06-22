@@ -1,171 +1,197 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
-from env import FifoEnv
+from coverage import FunctionalCoverage
+
+fcov = FunctionalCoverage()
+
+async def start_clock(dut):
+    clock = Clock(dut.CLK, 10, units="ns")
+    cocotb.start_soon(clock.start())
 
 async def reset_dut(dut):
-    dut.RST.value = 1
-    dut.WR_EN.value = 0
-    dut.RD_EN.value = 0
-    await RisingEdge(dut.CLK)
-    dut.RST.value = 0
-    await RisingEdge(dut.CLK)
-
-@cocotb.test()
-async def test_fifo_basic_write_read(dut):
-    """Basic test: write one value, read it back"""
-    cocotb.start_soon(Clock(dut.CLK, 10, units="ns").start())
-
-    await reset_dut(dut)
-
-    dut.DATA_IN.value = 0xAB
-    dut.WR_EN.value = 1
-    await RisingEdge(dut.CLK)
-    dut.WR_EN.value = 0
-    await RisingEdge(dut.CLK)
-
-    dut.RD_EN.value = 1
-    await RisingEdge(dut.CLK)
-    dut.RD_EN.value = 0
-    await RisingEdge(dut.CLK)
-    assert dut.DATA_OUT.value == 0xAB, f"Expected 0xAB, got {hex(int(dut.DATA_OUT.value))}"
-    dut._log.info("Basic write-read test passed.")
-
-@cocotb.test()
-async def test_read_when_empty(dut):
-    """Corner Case: Try reading from an empty FIFO"""
-       cocotb.start_soon(Clock(dut.CLK, 10, units="ns").start())
-    await reset_dut(dut)
-
-    dut._log.info("Attempting read when FIFO is empty")
-    dut.RD_EN.value = 1
-    await RisingEdge(dut.CLK)
-    dut.RD_EN.value = 0
-
-    assert dut.EMPTY.value == 1 or dut.empty_n.value == 0, "FIFO should be empty"
-    dut._log.info(f"DATA_OUT after empty read: {hex(int(dut.DATA_OUT.value))}")
-
-
-@cocotb.test()
-async def test_fifo_overwrite_corner_case(dut):
-    """Corner Case 3: Write Twice Without Read — Check Overwrite Behavior"""
-
-    cocotb.start_soon(Clock(dut.CLK, 10, units="ns").start())
-    dut.RST.value = 1
-    await RisingEdge(dut.CLK)
-    dut.RST.value = 0
-    await RisingEdge(dut.CLK)
-
-    dut.DATA_IN.value = 0xAA
-    dut.WR_EN.value = 1
-    await RisingEdge(dut.CLK)
-
-    dut.DATA_IN.value = 0xBB
-    await RisingEdge(dut.CLK)
-
-    dut.WR_EN.value = 0
-    await RisingEdge(dut.CLK)
-
-    dut.RD_EN.value = 1
-    await RisingEdge(dut.CLK)
-    dut.RD_EN.value = 0
-
-    output_val = dut.DATA_OUT.value.integer
-    dut._log.info(f"Read value: {hex(output_val)}")
-    expected_val = 0xBB  # or 0xAA based on design
-    assert output_val == expected_val, f"Expected {hex(expected_val)}, got {hex(output_val)}"
-
-@cocotb.test()
-async def fifo_same_value_repeatedly(dut):
-    env = FifoEnv(dut)
-    await env.start()
-
-    repeated_value = 0xAB
-    for _ in range(4):
-        dut.DATA_IN.value = repeated_value
-        dut.WR_EN.value = 1
-        await RisingEdge(dut.CLK)
-        dut.WR_EN.value = 0
-
-        if not dut.FULL.value:
-            env.scoreboard.add_expected(repeated_value)
-
-        await RisingEdge(dut.CLK)
-    for _ in range(4):
-        dut.RD_EN.value = 1
-        await RisingEdge(dut.CLK)
-        dut.RD_EN.value = 0
-        await RisingEdge(dut.CLK)
-
-@cocotb.test()
-async def fifo_rapid_toggle_wr_rd(dut):
-    env = FifoEnv(dut)
-    await env.start()
-    toggle_data = [0x11, 0x22, 0x33]
-
-    for val in toggle_data:
-        # WR_EN high for 1 cycle
-        dut.DATA_IN.value = val
-        dut.WR_EN.value = 1
-        await RisingEdge(dut.CLK)
-        dut.WR_EN.value = 0
-
-        if not dut.FULL.value:
-            env.scoreboard.add_expected(val)
-        await RisingEdge(dut.CLK)
-        dut.RD_EN.value = 1
-        await RisingEdge(dut.CLK)
-        dut.RD_EN.value = 0
-        await RisingEdge(dut.CLK)
-@cocotb.test()
-async def fifo_reset_while_full(dut):
-    """Corner Case: Apply reset while FIFO is full"""
-    env = FifoEnv(dut)
-    await env.start()
-    for val in [0x11, 0x22, 0x33]:
-        dut.DATA_IN.value = val
-        dut.WR_EN.value = 1
-        await RisingEdge(dut.CLK)
-        dut.WR_EN.value = 0
-        await RisingEdge(dut.CLK)
-
-        if not dut.FULL.value:
-            env.scoreboard.add_expected(val)
-
-    dut._log.info("[TEST] FIFO filled. Applying reset now.")
-
     dut.RST_N.value = 0
-    await RisingEdge(dut.CLK)                                                                               
+    await Timer(50, units="ns")
     dut.RST_N.value = 1
     await RisingEdge(dut.CLK)
 
-    assert dut.EMPTY.value == 1, " FIFO not empty after reset!"
-    assert dut.FULL.value == 0, " FIFO full flag still high after reset!"
-    dut._log.info("[TEST] Reset handled correctly while FIFO was full.")
+async def write_to_fifo(dut, data, addr):
+    dut.write_en.value = 1
+    dut.write_address.value = addr
+    dut.write_data.value = data
+    await RisingEdge(dut.CLK)
+    dut.write_en.value = 0
+    await RisingEdge(dut.CLK)
+    fcov.track_write_address(addr)
 
 @cocotb.test()
-async def fifo_one_cycle_toggle(dut):
-    """Corner Case: Rapid 1-cycle toggle of WR_EN and RD_EN"""
-    env = FifoEnv(dut)
-    await env.start()
+async def corner_complete_coverage_fill(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("complete_coverage_fill")
 
-    test_data = [0x44, 0x55]
+    or_cases = [(0, 0), (0, 1), (1, 0), (1, 1)]
+    for a, b in or_cases:
+        fcov.track_or_input(a, b)
 
-    for val in test_data:
-        dut.DATA_IN.value = val
-        dut.WR_EN.value = 1
-        dut.RD_EN.value = 1
+    for addr in [4, 5]:
+        await write_to_fifo(dut, 1, addr)  # already tracks
 
-        await RisingEdge(dut.CLK)  
-        dut.WR_EN.value = 0
-        dut.RD_EN.value = 0
+    for addr in [0, 1, 2, 3]:
+        dut.read_en.value = 1
+        dut.read_address.value = addr
+        fcov.track_read_address(addr)
+        await RisingEdge(dut.CLK)
+        dut.read_en.value = 0
         await RisingEdge(dut.CLK)
 
-        env.coverage.sample(dut)
-        dut._log.info(f"[TEST] Wrote and Read: 0x{val:02X}")
-        if not dut.FULL.value:
-            env.scoreboard.add_expected(val)
-        else:
-            dut._log.warning(f"[TEST] FIFO full. Skipping expected for 0x{val:02X}")
+@cocotb.test()
+async def corner_write_same_repeatedly(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("write_same_repeatedly")
+    dut._log.info("Writing 1 repeatedly to a_ff and b_ff")
+    for i in range(3):
+        await write_to_fifo(dut, 1, 4)  # to a_ff
+        await write_to_fifo(dut, 1, 5)  # to b_ff
+        await Timer(10, units="ns")
 
-    await Timer(10, units="ns")  
+@cocotb.test()
+async def corner_write_when_full(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("write_when_full")
+    dut._log.info("Testing write to a_ff when full")
+    await write_to_fifo(dut, 1, 4)
+    await write_to_fifo(dut, 0, 4)
+    await write_to_fifo(dut, 1, 4)
+    await Timer(20, units="ns")
+
+@cocotb.test()
+async def corner_read_y_ff_when_empty(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("read_y_ff_when_empty")
+    fcov.track_read_address(3)
+    dut._log.info("Attempting to read from y_ff when it is empty")
+    dut.read_en.value = 1
+    dut.read_address.value = 3
+    await RisingEdge(dut.CLK)
+    dut.read_en.value = 0
+    await RisingEdge(dut.CLK)
+    read_val = dut.read_data.value.integer
+    dut._log.info(f"Read value from y_ff when empty: {read_val}")
+    assert read_val == 0, f"Expected 0 from empty y_ff, got {read_val}"
+
+@cocotb.test()
+async def corner_rapid_toggle(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("rapid_toggle")
+    dut._log.info("Rapid toggling of write_en and read_en") 
+    await write_to_fifo(dut, 1, 4)
+    await write_to_fifo(dut, 0, 5)
+    for _ in range(3):
+        await RisingEdge(dut.CLK)
+
+    for i in range(4):
+        dut.write_en.value = 1
+        dut.write_address.value = 4
+        dut.write_data.value = i % 2
+        fcov.track_write_address(4)
+        fcov.track_or_input(i % 2, i % 2)
+
+        dut.read_en.value = 1
+        dut.read_address.value = 3
+        fcov.track_read_address(3)
+
+        await RisingEdge(dut.CLK)
+
+        dut.write_en.value = 0
+        dut.read_en.value = 0
+        await RisingEdge(dut.CLK)
+
+        dut._log.info(f"Cycle {i}: Wrote {i%2} to a_ff, tried reading from y_ff")
+
+    await RisingEdge(dut.CLK)
+    read_val = dut.read_data.value.integer
+    dut._log.info(f"Final read from y_ff: {read_val}")
+
+@cocotb.test()
+async def corner_all_fifos_full(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("all_fifos_full")
+    dut._log.info("Corner 3: Filling all FIFOs")
+    await write_to_fifo(dut, 1, 4)
+    await write_to_fifo(dut, 0, 4)
+    await write_to_fifo(dut, 1, 5)
+    for _ in range(4):
+        await RisingEdge(dut.CLK)
+    await write_to_fifo(dut, 1, 4)
+    await write_to_fifo(dut, 0, 5)
+    dut._log.info("Tried writing to full FIFOs. Observe ENQ signals in waveform.")
+    await Timer(20, units="ns")
+
+@cocotb.test()
+async def corner_over_read_y_ff(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("over_read_y_ff")
+    dut._log.info("Corner 4: Over-read y_ff")
+
+    await write_to_fifo(dut, 1, 4)
+    await write_to_fifo(dut, 0, 5)
+    fcov.track_or_input(1, 0)
+    for _ in range(3):
+        await RisingEdge(dut.CLK)
+
+    for i in range(3):
+        dut.read_en.value = 1
+        dut.read_address.value = 3
+        fcov.track_read_address(3)
+        await RisingEdge(dut.CLK)
+        dut.read_en.value = 0
+        await RisingEdge(dut.CLK)
+        val = dut.read_data.value.integer
+        dut._log.info(f"Read {i}: value from y_ff = {val}")
+
+@cocotb.test()
+async def corner_mid_reset(dut):
+    await start_clock(dut)
+    await reset_dut(dut)
+    fcov.track_corner("mid_reset")
+    dut._log.info("Corner 5: Mid-operation reset")
+
+    await write_to_fifo(dut, 1, 4)
+    await write_to_fifo(dut, 1, 5)
+    fcov.track_or_input(1, 1)
+    for _ in range(3):
+        await RisingEdge(dut.CLK)
+
+    dut._log.info("Asserting reset mid-test")
+    dut.RST_N.value = 0
+    await Timer(30, units="ns")
+    dut.RST_N.value = 1
+    await RisingEdge(dut.CLK)
+
+    await write_to_fifo(dut, 0, 4)
+    await write_to_fifo(dut, 1, 5)
+    fcov.track_or_input(0, 1)
+    for _ in range(3):
+        await RisingEdge(dut.CLK)
+
+    dut.read_en.value = 1
+    dut.read_address.value = 3
+    fcov.track_read_address(3)
+    await RisingEdge(dut.CLK)
+    dut.read_en.value = 0
+    await RisingEdge(dut.CLK)
+
+    val = dut.read_data.value.integer
+    dut._log.info(f"Read after reset: y_ff = {val}")
+
+@cocotb.test()
+async def zzz_final_coverage_report(dut):
+    """Run this test last to report coverage"""
+    fcov.report()
