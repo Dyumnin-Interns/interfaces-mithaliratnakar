@@ -25,9 +25,9 @@ module dut_wrapper (
       .read_data(read_data),
       .read_rdy(read_rdy)
   );
-  assign a_ff_dout = dut_inst.a_ff$D_OUT;
-  assign b_ff_dout = dut_inst.b_ff$D_OUT;
-  assign y_ff_dout = dut_inst.y_ff$D_OUT;
+  assign a_ff_dout = dut_inst.a_ff_D_OUT;
+  assign b_ff_dout = dut_inst.b_ff_D_OUT;
+  assign y_ff_dout = dut_inst.y_ff_D_OUT;
 initial begin
   $dumpfile("waveform.vcd");
   $dumpvars(0, dut_wrapper);
