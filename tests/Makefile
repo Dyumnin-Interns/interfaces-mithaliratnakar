@@ -8,6 +8,4 @@ TOPLEVEL = dut_wrapper
 MODULE = testcases
 
 SIM = icarus
-COMPILE_ARGS += -g2012
-
-include $(shell cocotb-config --makefiles)/Makefile.sim
+include $(shell cocotb-config --makefiles)/Makefile.inc
