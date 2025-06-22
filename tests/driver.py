@@ -1,22 +1,28 @@
-import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, Timer
 
-class FifoDriver:
+class DutDriver:
     def __init__(self, dut):
         self.dut = dut
 
-    async def read(self):
-        """Read data from FIFO before writing."""
-        self.dut.read_en.value = 1
-        await RisingEdge(self.dut.CLK)
+    async def initialize(self):
+        self.dut.write_en.value = 0
         self.dut.read_en.value = 0
+        self.dut.write_address.value = 0
+        self.dut.write_data.value = 0
+        self.dut.read_address.value = 0
         await RisingEdge(self.dut.CLK)
-        return int(self.dut.D_OUT.value)
 
-    async def write(self, data):
-        """Drive data into FIFO after reading."""
-        self.dut.D_IN.value = data
+    async def write(self, address, data):
+        self.dut.write_address.value = address
+        self.dut.write_data.value = data
         self.dut.write_en.value = 1
         await RisingEdge(self.dut.CLK)
         self.dut.write_en.value = 0
+        await RisingEdge(self.dut.CLK)
+
+    async def read(self, address):
+        self.dut.read_address.value = address
+        self.dut.read_en.value = 1
+        await RisingEdge(self.dut.CLK)
+        self.dut.read_en.value = 0
         await RisingEdge(self.dut.CLK)
