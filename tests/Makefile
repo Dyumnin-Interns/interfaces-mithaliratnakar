@@ -1,8 +1,6 @@
 TOPLEVEL_LANG = verilog
-VERILOG_SOURCES = ../hdl/FIFO1.v ../hdl/FIFO2.v ../hdl/dut.v ../hdl/dut_wrapper.v
+VERILOG_SOURCES = FIFO1.v FIFO2.v dut.v dut_wrapper.v
 TOPLEVEL = dut_wrapper
-MODULE = dut_test
-
+MODULE = testcases
 SIM = icarus
-
 include $(shell cocotb-config --makefiles)/Makefile.sim
