@@ -1,45 +1,49 @@
-from driver import FifoDriver
-from monitor import FifoMonitor
-from scoreboard import FifoScoreboard
-from coverage import FifoCoverage
-from cocotb.clock import Clock
-from cocotb.triggers import Timer
-import cocotb
+from cocotb.triggers import RisingEdge
+from cocotb_coverage.coverage import coverage_db
+from driver import DutDriver
+from monitor import DutMonitor
+from scoreboard import Scoreboard
 
-class FifoEnv:
+
+class DutEnv:
     def __init__(self, dut):
         self.dut = dut
-        self.driver = FifoDriver(dut)
-        self.monitor = FifoMonitor(dut)
-        self.scoreboard = FifoScoreboard()
-        self.coverage = FifoCoverage()
+        self.driver = DutDriver(dut)
+        self.scoreboard = Scoreboard()
+        self.monitor = DutMonitor(dut, self.scoreboard.compare)
+
+    async def reset(self):
+        """Apply reset to the DUT."""
+        self.dut.RST_N.value = 0
+        await RisingEdge(self.dut.CLK)
+        await RisingEdge(self.dut.CLK)
+        self.dut.RST_N.value = 1
+        await RisingEdge(self.dut.CLK)
+        await RisingEdge(self.dut.CLK)
 
     async def start(self):
-        """Start clock, reset, and connect monitor to scoreboard."""
-        await self._start_clock()
-        await self._reset_dut()
-        self._start_monitor()
+        """Start the environment."""
+        await self.driver.initialize()
+        self.monitor.start()
+        await self.reset()
 
-    async def _start_clock(self):
-        cocotb.start_soon(Clock(self.dut.CLK, 10, units="ns").start())
+    async def write(self, address: int, data: int):
+        """Convenience wrapper to perform a write through driver."""
+        await self.driver.write(address, data)
 
-    async def _reset_dut(self):
-        self.dut.RST_N.value = 1
-        await Timer(2, units="ns")
-        self.dut.RST_N.value = 0
-        await Timer(5, units="ns")
-        self.dut.RST_N.value = 1
-        await Timer(5, units="ns")
+    async def read(self, address: int):
+        """Convenience wrapper to perform a read through driver."""
+        await self.driver.read(address)
 
-    def _start_monitor(self):
-        """Start monitor and connect it to scoreboard callback."""
-        self.monitor.set_callback(self.monitor_callback)
-        cocotb.start_soon(self.monitor.monitor_reads())
+    def check_scoreboard(self, expected):
+        """Compare with expected output value."""
+        self.scoreboard.expect(expected)
 
-    async def monitor_callback(self, data):
-        self.dut._log.info(f"[MONITOR] Observed read: 0x{data:02X}")
-        if self.scoreboard.expected:
-            self.scoreboard.compare(data)
-        else:
-        
-            pass
+    def expect_empty_read(self):
+        """For read when FIFO is empty — can add assertions or logs."""
+        if not self.scoreboard.was_read_expected():
+            raise AssertionError("Unexpected read occurred while FIFO was empty.")
+
+    def report_coverage(self):
+        """Export coverage to YAML file."""
+        coverage_db.export_to_yaml(filename="coverage.yml")
