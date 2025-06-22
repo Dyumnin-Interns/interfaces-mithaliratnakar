@@ -1,48 +1,77 @@
-class FifoCoverage:
+from collections import defaultdict
+class FunctionalCoverage:
     def __init__(self):
-        self.coverage = {
-            "write_when_empty": 0,
-            "write_when_full": 0,
-            "read_when_empty": 0,
-            "read_when_full": 0,
-            "simultaneous_read_write": 0,
-            "full_flag_asserted": 0,
-            "empty_flag_asserted": 0
-        }
-        self.total_bins = len(self.coverage)
-
-    def sample(self, dut):
-        try:
-            wr = int(dut.WR_EN.value)
-            rd = int(dut.RD_EN.value)
-            full = int(dut.FULL.value)
-            empty = int(dut.EMPTY.value)
-        except ValueError:
-            return  # Skip if signals are 'z' or 'x'
-
-        if wr and empty:
-            self.coverage["write_when_empty"] += 1
-        if wr and full:
-            self.coverage["write_when_full"] += 1
-        if rd and empty:
-            self.coverage["read_when_empty"] += 1
-        if rd and full:
-            self.coverage["read_when_full"] += 1
-        if wr and rd:
-            self.coverage["simultaneous_read_write"] += 1
-        if full:
-            self.coverage["full_flag_asserted"] += 1
-        if empty:
-            self.coverage["empty_flag_asserted"] += 1
-
+        self.or_combos = set()
+        self.write_hits = set()
+        self.read_hits = set()
+        self.addr_reads = set()
+        self.corner_hits = defaultdict(int)
+    def track_or_input(self, a_val, b_val):
+        self.or_combos.add((a_val, b_val))
+    def track_write_address(self, addr):
+        if addr in [0, 1, 2, 3, 4, 5]:
+            self.write_hits.add(addr)
+    def track_read_address(self, addr):
+        if addr in [0, 1, 2, 3]:
+            self.read_hits.add(addr)
+    def track_corner(self, name):
+        self.corner_hits[name] += 1
+    def all_covered(self):
+        return (
+            self.or_combos == {(0, 0), (0, 1), (1, 0), (1, 1)} and
+            {4, 5}.issubset(self.write_hits) and
+            {0, 1, 2, 3}.issubset(self.read_hits)
+        )
     def report(self):
-        print("\n========= FUNCTIONAL COVERAGE REPORT =========")
-        total_hit = 0
-        for key, count in self.coverage.items():
-            status = "yes" if count > 0 else "no"
-            total_hit += 1 if count > 0 else 0
-            print(f"{key:<35}: {count:>3} hits {status}")
-        percent = (total_hit / self.total_bins) * 100
-        print("-----------------------------------------------")
-        print(f"Total Coverage: {total_hit}/{self.total_bins} bins hit ({percent:.2f}%)")
-        print("===============================================\n")
+        print("\n================ FUNCTIONAL COVERAGE REPORT ================")
+        print("\nOR Input Combinations Hit:")
+        for pair in sorted([(0, 0), (0, 1), (1, 0), (1, 1)]):
+            status = "yes" if pair in self.or_combos else "no"
+            print(f"  OR{pair} -> {status}")
+        print("\nWrite Addresses Hit:")
+        for addr in sorted([4, 5]):
+            status = "yes" if addr in self.write_hits else "no"
+            print(f"  Write to address {addr} -> {status}")
+        print("\nRead Addresses Hit:")
+        for addr in sorted([0, 1, 2, 3]):
+            status = "yes" if addr in self.read_hits else "no"
+            print(f"  Read from address {addr} -> {status}")
+        print("\nCorner Case Tests:")
+        if not self.corner_hits:
+    def all_covered(self):
+        return (
+            self.or_combos == {(0, 0), (0, 1), (1, 0), (1, 1)} and
+            {4, 5}.issubset(self.write_hits) and
+            {0, 1, 2, 3}.issubset(self.read_hits)
+        )
+    def report(self):
+        print("\n================ FUNCTIONAL COVERAGE REPORT ================")
+        print("\nOR Input Combinations Hit:")
+        for pair in sorted([(0, 0), (0, 1), (1, 0), (1, 1)]):
+            status = "yes" if pair in self.or_combos else "no"
+            print(f"  OR{pair} -> {status}")
+        print("\nWrite Addresses Hit:")
+        for addr in sorted([4, 5]):
+            status = "yes" if addr in self.write_hits else "no"
+            print(f"  Write to address {addr} -> {status}")
+        print("\nRead Addresses Hit:")
+        for addr in sorted([0, 1, 2, 3]):
+            status = "yes" if addr in self.read_hits else "no"
+            print(f"  Read from address {addr} -> {status}")
+        print("\nCorner Case Tests:")
+        if not self.corner_hits:
+            print("  (No corner cases tracked)")
+        else:
+            for name, count in self.corner_hits.items():
+                print(f"  {name}: {count} hit(s)")
+        total_points = 4 + 2 + 4  # OR combos + write addresses + read addresses
+        covered_points = (
+            len(self.or_combos.intersection({(0, 0), (0, 1), (1, 0), (1, 1)})) +
+            len({4, 5}.intersection(self.write_hits)) +
+            len({0, 1, 2, 3}.intersection(self.read_hits))
+        )
+        percent = (covered_points / total_points) * 100
+
+        print(f"\nOverall Coverage:  {percent:.0f}%")
+        print("============================================================\n")
+
