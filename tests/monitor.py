@@ -1,26 +1,18 @@
-from cocotb.triggers import Event, RisingEdge
-class FifoMonitor:
-    def __init__(self, dut):
+import cocotb
+from cocotb.triggers import RisingEdge
+
+class DutMonitor:
+    def __init__(self, dut, callback):
         self.dut = dut
-        self.read_event = Event()
-        self.last_read_data = 0
-        self._callback = None
+        self.callback = callback
+        self._monitor_task = None
 
-    def set_callback(self, callback):
-        self._callback = callback
+    def start(self):
+        self._monitor_task = cocotb.start_soon(self._monitor_output())
 
-    async def monitor_reads(self):
+    async def _monitor_output(self):
         while True:
             await RisingEdge(self.dut.CLK)
-            if self.dut.RD_EN.value and not self.dut.EMPTY.value:
-                self.last_read_data = int(self.dut.DATA_OUT.value)
-                self.read_event.set()
-                if self._callback:
-                    await self._callback(self.last_read_data)
-
-
-
-
-
-
-
+            if self.dut.read_en.value == 1 and self.dut.read_rdy.value == 1:
+                read_val = int(self.dut.read_data.value)
+                self.callback(read_val)
