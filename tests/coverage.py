@@ -26,44 +26,23 @@ class FunctionalCoverage:
         print("\n================ FUNCTIONAL COVERAGE REPORT ================")
         print("\nOR Input Combinations Hit:")
         for pair in sorted([(0, 0), (0, 1), (1, 0), (1, 1)]):
-            status = "yes" if pair in self.or_combos else "no"
+            status = "✔" if pair in self.or_combos else "✘"
             print(f"  OR{pair} -> {status}")
         print("\nWrite Addresses Hit:")
         for addr in sorted([4, 5]):
-            status = "yes" if addr in self.write_hits else "no"
+            status = "✔" if addr in self.write_hits else "✘"
             print(f"  Write to address {addr} -> {status}")
         print("\nRead Addresses Hit:")
         for addr in sorted([0, 1, 2, 3]):
-            status = "yes" if addr in self.read_hits else "no"
+            status = "✔" if addr in self.read_hits else "✘"
             print(f"  Read from address {addr} -> {status}")
         print("\nCorner Case Tests:")
         if not self.corner_hits:
-    def all_covered(self):
-        return (
-            self.or_combos == {(0, 0), (0, 1), (1, 0), (1, 1)} and
-            {4, 5}.issubset(self.write_hits) and
-            {0, 1, 2, 3}.issubset(self.read_hits)
-        )
-    def report(self):
-        print("\n================ FUNCTIONAL COVERAGE REPORT ================")
-        print("\nOR Input Combinations Hit:")
-        for pair in sorted([(0, 0), (0, 1), (1, 0), (1, 1)]):
-            status = "yes" if pair in self.or_combos else "no"
-            print(f"  OR{pair} -> {status}")
-        print("\nWrite Addresses Hit:")
-        for addr in sorted([4, 5]):
-            status = "yes" if addr in self.write_hits else "no"
-            print(f"  Write to address {addr} -> {status}")
-        print("\nRead Addresses Hit:")
-        for addr in sorted([0, 1, 2, 3]):
-            status = "yes" if addr in self.read_hits else "no"
-            print(f"  Read from address {addr} -> {status}")
-        print("\nCorner Case Tests:")
-        if not self.corner_hits:
-            print("  (No corner cases tracked)")
+                        print("  (No corner cases tracked)")
         else:
             for name, count in self.corner_hits.items():
                 print(f"  {name}: {count} hit(s)")
+        # Percentage-based overall coverage
         total_points = 4 + 2 + 4  # OR combos + write addresses + read addresses
         covered_points = (
             len(self.or_combos.intersection({(0, 0), (0, 1), (1, 0), (1, 1)})) +
@@ -74,4 +53,3 @@ class FunctionalCoverage:
 
         print(f"\nOverall Coverage:  {percent:.0f}%")
         print("============================================================\n")
-
