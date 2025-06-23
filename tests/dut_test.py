@@ -30,30 +30,25 @@ async def write_to_fifo(dut, data, addr):
 
 @cocotb.test()
 async def test_all_or_cases(dut):
-    """Test all A || B combinations and check functional correctness of y_ff output."""
     cocotb.start_soon(Clock(dut.CLK, 10, units="ns").start())
-
     driver = DutDriver(dut)
     await driver.initialize()
 
     test_vectors = [(0, 0), (0, 1), (1, 0), (1, 1)]
+
     for a_val, b_val in test_vectors:
         dut._log.info(f"\n=== A={a_val}, B={b_val} ===")
 
-        # Clear y_ff before new test
         while await driver.read_y_ff_valid():
             _ = await driver.read_y_ff_data()
 
-        # Preload both FIFOs with dummy values to make sure they're non-empty
         await driver.write_input(WRITE_ADDR_A, 0)
         await driver.write_input(WRITE_ADDR_B, 0)
-        await RisingEdge(dut.CLK)  # give one cycle to settle
+        await RisingEdge(dut.CLK)
 
-        # Now write actual test values
         await driver.write_input(WRITE_ADDR_A, a_val)
         await driver.write_input(WRITE_ADDR_B, b_val)
 
-        # Wait for y_ff to be valid (non-empty)
         for _ in range(10):
             if await driver.read_y_ff_valid():
                 break
@@ -61,7 +56,6 @@ async def test_all_or_cases(dut):
         else:
             raise TimeoutError("Timeout: y_ff did not become valid.")
 
-        # Read and verify
         y_out = await driver.read_y_ff_data()
         expected = a_val | b_val
         dut._log.info(f"RESULT: A={a_val}, B={b_val} → Y={y_out}, Expected={expected}")
@@ -76,7 +70,8 @@ async def corner_complete_coverage_fill(dut):
     or_cases = [(0, 0), (0, 1), (1, 0), (1, 1)]
     for a, b in or_cases:
         fcov.track_or_input(a, b)
-            for addr in [4, 5]:
+
+    for addr in [4, 5]:
         await write_to_fifo(dut, 1, addr)
 
     for addr in [0, 1, 2, 3]:
@@ -156,7 +151,7 @@ async def corner_all_fifos_full(dut):
     fcov.track_corner("all_fifos_full")
     await write_to_fifo(dut, 1, 4)
     await write_to_fifo(dut, 0, 4)
-        await write_to_fifo(dut, 1, 5)
+    await write_to_fifo(dut, 1, 5)
     for _ in range(4):
         await RisingEdge(dut.CLK)
     await write_to_fifo(dut, 1, 4)
