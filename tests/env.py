@@ -3,8 +3,6 @@ from cocotb_coverage.coverage import coverage_db
 from driver import DutDriver
 from monitor import DutMonitor
 from scoreboard import Scoreboard
-
-
 class DutEnv:
     def __init__(self, dut):
         self.dut = dut
@@ -47,3 +45,4 @@ class DutEnv:
     def report_coverage(self):
         """Export coverage to YAML file."""
         coverage_db.export_to_yaml(filename="coverage.yml")
+
