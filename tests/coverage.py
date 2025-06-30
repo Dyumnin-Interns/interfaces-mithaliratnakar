@@ -26,15 +26,15 @@ class FunctionalCoverage:
         print("\n================ FUNCTIONAL COVERAGE REPORT ================")
         print("\nOR Input Combinations Hit:")
         for pair in sorted([(0, 0), (0, 1), (1, 0), (1, 1)]):
-            status = "✔" if pair in self.or_combos else "✘"
+            status = "pass" if pair in self.or_combos else "fail"
             print(f"  OR{pair} -> {status}")
         print("\nWrite Addresses Hit:")
         for addr in sorted([4, 5]):
-            status = "✔" if addr in self.write_hits else "✘"
+            status = "pass" if addr in self.write_hits else "fail"
             print(f"  Write to address {addr} -> {status}")
         print("\nRead Addresses Hit:")
         for addr in sorted([0, 1, 2, 3]):
-            status = "✔" if addr in self.read_hits else "✘"
+            status = "pass" if addr in self.read_hits else "fail"
             print(f"  Read from address {addr} -> {status}")
         print("\nCorner Case Tests:")
         if not self.corner_hits:
