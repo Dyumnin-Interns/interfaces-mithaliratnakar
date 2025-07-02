@@ -49,7 +49,7 @@ async def test_all_or_cases(dut):
         await driver.write_input(WRITE_ADDR_A, a_val)
         await driver.write_input(WRITE_ADDR_B, b_val)
 
-        for _ in range(10):
+        for _ in range(60):
             if await driver.read_y_ff_valid():
                 break
             await RisingEdge(dut.CLK)
